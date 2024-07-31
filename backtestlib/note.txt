@@ -1,0 +1,25 @@
+
+market_data.py:
+class:
+	MarketData()
+        func:
+	    download_data_from_yfinance()
+	    get_marketdata_saved_path_in_list()
+	    save_downloaded_data_from_yfinance()
+	    get_data_from_xlsx()
+account.py
+class:
+	Account()
+	func:
+	    deposit()
+	    withdraw()
+	    transfer_cash_to_floating_asset()
+	    create_floating_asset()
+	    del_floating_asset()
+	    update_balance_from_floating_assets_cash()
+order.py:
+	id、set,type,direction,notes,symbol,limit
+Order
+Transaction
+Inventory
+Account
