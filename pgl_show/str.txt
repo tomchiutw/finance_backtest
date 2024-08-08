@@ -1,0 +1,1543 @@
+# 新版策略
+
+## 策略代碼：
+
+[coef_signal_setter.py](https://prod-files-secure.s3.us-west-2.amazonaws.com/45da35f8-32f2-4dc5-91bc-96d683d09347/278009c9-1713-4e5d-874f-aa56e45b2b2a/coef_signal_setter.py)
+
+## 策略交易細節檔案：
+
+[新策略交易細節.zip](https://prod-files-secure.s3.us-west-2.amazonaws.com/45da35f8-32f2-4dc5-91bc-96d683d09347/8f0df72f-a2cb-4bac-9ed7-f06c6115e3c6/%E6%96%B0%E7%AD%96%E7%95%A5%E4%BA%A4%E6%98%93%E7%B4%B0%E7%AF%80.zip)
+
+# **策略概述**
+
+### 3Levels (BTC/USD, 120, 1.08)
+
+[https://winsmart.tw/online_teaching/三關價/](https://winsmart.tw/online_teaching/%E4%B8%89%E9%97%9C%E5%83%B9/)
+
+最佳化參數（個數：2）
+
+- [x]  TB deploy
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算價位水平的回溯期數。
+- `exit_param`：出場參數，用於計算上關價和下關價的調整比例。
+
+ 計算上、中、下價位水平
+
+```python
+self.data['upper_level'] = self.data['AskLow'].shift(1).rolling(entry_param).min() +
+                           (self.data['AskHigh'].shift(1).rolling(entry_param).max() -
+                            self.data['AskLow'].shift(1).rolling(entry_param).min()) * exit_param
+
+```
+
+設定交易信號
+
+```python
+self.data['突破signal價'] = self.data['upper_level']
+self.data['signal'] = False
+self.data['signal'] = ((self.data['AskOpen'] < self.data['upper_level']) &
+                       (self.data['AskOpen'] > self.data['mid_level']) &
+                       (self.data['AskHigh'] > self.data['upper_level']))
+
+```
+
+- `突破signal價`：設置突破信號價為上關價。
+- `signal`：當開盤價在中關價和上關價之間，且最高價突破上關價時，觸發多單買入信號。
+
+設定出場信號
+
+```python
+self.data['out_signal'] = ((self.data['BidOpen'] < self.data['upper_level']))
+self.data['出場signal價'] = self.data['BidOpen']
+
+```
+
+- `out_signal`：當開盤價低於上關價時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤買價。
+
+### 3Levels_L2-1 (BTC/USD, 120, 0.52)
+
+最佳化參數（個數：2）
+
+- [x]  TB deploy
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算價位水平的回溯期數。
+- `exit_param`：出場參數，用於計算上關價和下關價的調整比例。
+
+ 計算上、中、下價位水平
+
+```python
+self.data['upper_level'] = self.data['AskLow'].shift(1).rolling(entry_param).min() +
+                           (self.data['AskHigh'].shift(1).rolling(entry_param).max() -
+                            self.data['AskLow'].shift(1).rolling(entry_param).min()) * exit_param
+
+```
+
+設定交易信號
+
+```python
+self.data['突破signal價'] = self.data['mid_level']
+self.data['signal'] = False
+self.data['signal'] = ((self.data['AskOpen'] < self.data['mid_level']) &
+                       (self.data['AskOpen'] > self.data['lower_level']) &
+                       (self.data['AskHigh'] > self.data['mid_level']))
+```
+
+- `突破signal價`：設置突破信號價為中關價。
+- `signal`：當開盤價在中關價和下關價之間，且最高價突破中關價時，觸發多單買入信號。
+
+設定出場信號
+
+```python
+self.data['out_signal'] = ((self.data['AskOpen'] > self.data['upper_level']))
+self.data['出場signal價'] = self.data['BidOpen']
+```
+
+- `out_signal`：當開盤價高於上關價時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤買價
+
+### 3Levels_L3  (BTC/USD, 120, 0.5)
+
+最佳化參數（個數：2）
+
+- [x]  TB deploy
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算價位水平的回溯期數。
+- `exit_param`：出場參數，用於計算上關價和下關價的調整比例。
+
+ 計算上、中、下價位水平
+
+```python
+self.data['upper_level'] = self.data['AskLow'].shift(1).rolling(entry_param).min() +
+                           (self.data['AskHigh'].shift(1).rolling(entry_param).max() -
+                            self.data['AskLow'].shift(1).rolling(entry_param).min()) * exit_param
+
+```
+
+設定交易信號
+
+```python
+self.data['突破signal價'] = self.data['lower_level']
+self.data['signal'] = False
+self.data['signal'] = ((self.data['AskOpen'] < self.data['lower_level']) &
+                       (self.data['AskHigh'] > self.data['lower_level']))
+```
+
+- `突破signal價`：設置突破信號價為下關價。
+- `signal`：當開盤價低於下關價且最高價突破下關價時，觸發多單買入信號。
+
+設定出場信號
+
+```python
+self.data['out_signal'] = ((self.data['AskOpen'] > self.data['lower_level']))
+self.data['出場signal價'] = self.data['BidOpen']
+```
+
+- `out_signal`：當開盤價高於下關價時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤買價。
+
+### 3Levels_L3-2  (BTC/USD, 120, 0.53)
+
+最佳化參數（個數：2）
+
+- [x]  TB deploy
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算價位水平的回溯期數。
+- `exit_param`：出場參數，用於計算上關價和下關價的調整比例。
+
+ 計算上、中、下價位水平
+
+```python
+self.data['upper_level'] = self.data['AskLow'].shift(1).rolling(entry_param).min() +
+                           (self.data['AskHigh'].shift(1).rolling(entry_param).max() -
+                            self.data['AskLow'].shift(1).rolling(entry_param).min()) * exit_param
+
+```
+
+設定交易信號
+
+```python
+self.data['突破signal價'] = self.data['lower_level']
+self.data['signal'] = False
+self.data['signal'] = ((self.data['AskOpen'] < self.data['lower_level']) &
+                       (self.data['AskHigh'] > self.data['lower_level']))
+```
+
+- `突破signal價`：設置突破信號價為下關價。
+- `signal`：當開盤價低於下關價且最高價突破下關價時，觸發多單買入信號。
+
+設定出場信號
+
+```python
+self.data['out_signal'] = ((self.data['AskOpen'] >= self.data['upper_level']))
+self.data['出場signal價'] = self.data['BidOpen']
+```
+
+- `out_signal`：當開盤價高於或等於上關價時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤買價。
+
+### 3Levels_S2  (BTC/USD, 1, 0.11)
+
+最佳化參數（個數：2）
+
+- [x]  TB deploy
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算價位水平的回溯期數。
+- `exit_param`：出場參數，用於計算上關價和下關價的調整比例。
+
+ 計算上、中、下價位水平
+
+```python
+self.data['upper_level'] = self.data['BidLow'].shift(1).rolling(entry_param).min() + 
+                           (self.data['BidHigh'].shift(1).rolling(entry_param).max() - 
+                            self.data['BidLow'].shift(1).rolling(entry_param).min()) * exit_param
+```
+
+設定交易信號
+
+```python
+self.data['突破signal價'] = self.data['mid_level']
+self.data['signal'] = False
+self.data['signal'] = ((self.data['BidOpen'] > self.data['mid_level']) &
+                       (self.data['AskOpen'] < self.data['upper_level']) &
+                       (self.data['BidLow'] < self.data['mid_level']))
+```
+
+- `突破signal價`：設置突破信號價為中關價。
+- `signal`：當開盤買價高於中關價且開盤賣價低於上關價，並且最低買價低於中關價時，觸發多單買入信號。
+
+設定出場信號
+
+```python
+self.data['out_signal'] = ((self.data['AskOpen'] < self.data['mid_level']))
+self.data['出場signal價'] = self.data['AskOpen']
+```
+
+- `out_signal`：當開盤賣價低於中關價時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤賣價。
+
+### Granville_L1 (BTC/USD, 50, 24)
+
+https://www.oanda.com/bvi-ft/lab-education/technical_analysis/moving_average-granvilles_law/
+
+最佳化參數（個數：2）
+
+```python
+entry_param = int(self.entry_param)
+period = entry_param
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `period`：簡單移動平均線的窗口大小，與 `entry_param` 相同。
+- `exit_param`：出場參數，用於計算斜率的窗口大小。
+
+  計算簡單移動平均線（SMA40）
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=period).mean()
+```
+
+- 計算40期的簡單移動平均線，基於前一天的收盤價。
+
+計算斜率
+
+```python
+self.data['Slope'] = 
+self.data['SMA40'].rolling(window=exit_param).apply(lambda x: np.polyfit(range(exit_param), x, 1)[0], raw=True)
+```
+
+- 計算移動平均線在指定窗口內的斜率，使用 `numpy.polyfit` 函數進行線性回歸。
+
+向量化檢查條件
+
+```python
+self.data['Trend_Reversal'] = False
+recent_slope = self.data['Slope'].rolling(window=exit_param).mean()
+previous_slope = self.data['Slope'].shift(exit_param).rolling(window=exit_param).mean()
+
+self.data['Trend_Reversal'] = (recent_slope > 0) & (previous_slope < 0)
+```
+
+- 計算最近窗口內的平均斜率和前一窗口內的平均斜率。
+- 當最近的斜率為正且前一窗口內的斜率為負時，標記為趨勢反轉。
+
+設置進場和出場條件
+
+```python
+self.data['突破signal價'] = self.data['SMA40']
+self.data['signal'] = ((self.data['AskOpen'] < self.data['突破signal價']) & 
+                       (self.data['AskHigh'] > self.data['突破signal價']) & 
+                       self.data['Trend_Reversal'])
+self.data['out_signal'] = ((self.data['BidOpen'] > self.data['突破signal價']) & 
+                           (self.data['BidLow'] <= self.data['突破signal價']))
+self.data['出場signal價'] = self.data['突破signal價']
+```
+
+- `突破signal價`：設置突破信號價為 SMA40。
+- `signal`：當開盤賣價低於突破信號價且最高賣價高於突破信號價，同時發生趨勢反轉時，觸發買入信號。
+- `out_signal`：當開盤買價高於突破信號價且最低買價低於或等於突破信號價時，觸發出場信號。
+- 設置出場信號價為突破信號價。
+
+### Granville_L2 (BTC/USD, 40, 16)
+
+最佳化參數（個數：2）
+
+```python
+entry_param = int(self.entry_param)
+period = entry_param
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `period`：簡單移動平均線的窗口大小，與 `entry_param` 相同。
+- `exit_param`：出場參數，用於計算斜率的窗口大小。
+
+  計算簡單移動平均線（SMA40）
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=period).mean()
+```
+
+- 計算40期的簡單移動平均線，基於前一天的收盤價。
+
+計算斜率
+
+```python
+self.data['Slope'] = 
+self.data['SMA40'].rolling(window=exit_param).apply(lambda x: np.polyfit(range(exit_param), x, 1)[0], raw=True)
+```
+
+- 計算移動平均線在指定窗口內的斜率，使用 `numpy.polyfit` 函數進行線性回歸。
+
+向量化檢查條件
+
+```python
+self.data['Trend'] = False
+recent_slope = self.data['Slope'].rolling(window=exit_param).mean()
+self.data['Trend'] = (recent_slope > 0).shift(exit_param * 2).fillna(False)
+```
+
+- 計算最近窗口內的平均斜率。
+- 當最近的平均斜率為正時，標記為趨勢向上，並向後偏移兩倍的窗口大小以確保信號的有效性。
+
+設置進場和出場條件
+
+```python
+self.data['突破signal價'] = self.data['SMA40']
+self.data['signal'] = ((self.data['AskLow'] < self.data['突破signal價']) & 
+                       (self.data['AskClose'] > self.data['突破signal價']) & 
+                       (self.data['Trend'] == True))
+self.data['out_signal'] = ((self.data['BidOpen'] > self.data['突破signal價']) & 
+                           (self.data['BidLow'] <= self.data['突破signal價']))
+self.data['出場signal價'] = self.data['突破signal價']
+```
+
+- `突破signal價`：設置突破信號價為 SMA40。
+- `signal`：當最低賣價低於突破信號價且收盤賣價高於突破信號價，同時趨勢向上時，觸發買入信號。
+- `out_signal`：當開盤買價高於突破信號價且最低買價低於或等於突破信號價時，觸發出場信號。
+- 設置出場信號價為突破信號價
+
+### Granville_S1  (BTC/USD, 22, 13)
+
+最佳化參數（個數：2）
+
+```python
+entry_param = int(self.entry_param)
+period = entry_param
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `period`：簡單移動平均線的窗口大小，與 `entry_param` 相同。
+- `exit_param`：出場參數，用於計算斜率的窗口大小。
+
+  計算簡單移動平均線（SMA40）
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=period).mean()
+```
+
+- 計算40期的簡單移動平均線，基於前一天的收盤價。
+
+計算斜率
+
+```python
+self.data['Slope'] = 
+self.data['SMA40'].rolling(window=exit_param).apply(lambda x: np.polyfit(range(exit_param), x, 1)[0], raw=True)
+```
+
+- 計算移動平均線在指定窗口內的斜率，使用 `numpy.polyfit` 函數進行線性回歸。
+
+向量化檢查條件
+
+```python
+self.data['Trend_Reversal'] = False
+recent_slope = self.data['Slope'].rolling(window=exit_param).mean()
+previous_slope = self.data['Slope'].shift(exit_param).rolling(window=exit_param).mean()
+
+self.data['Trend_Reversal'] = (recent_slope < 0) & (previous_slope > 0)
+```
+
+- 計算最近窗口內的平均斜率和前一窗口內的平均斜率。
+- 當最近的斜率為負且前一窗口內的斜率為正時，標記為趨勢反轉。
+
+設置進場和出場條件
+
+```python
+self.data['突破signal價'] = self.data['SMA40']
+self.data['signal'] = ((self.data['BidOpen'] > self.data['突破signal價']) & 
+                       (self.data['BidLow'] < self.data['突破signal價']) & 
+                       self.data['Trend_Reversal'])
+self.data['out_signal'] = ((self.data['BidOpen'] < self.data['突破signal價']) & 
+                           (self.data['BidHigh'] >= self.data['突破signal價']))
+self.data['出場signal價'] = self.data['突破signal價']
+```
+
+- `突破signal價`：設置突破信號價為 SMA40。
+- `signal`：當開盤買價高於突破信號價且最低買價低於突破信號價，同時發生趨勢反轉時，觸發買入信號。
+- `out_signal`：當開盤買價低於突破信號價且最高買價高於或等於突破信號價時，觸發出場信號。
+- 設置出場信號價為突破信號價。
+
+### Granville_S2   (BTC/USD, 4, 10)
+
+最佳化參數（個數：2）
+
+```python
+entry_param = int(self.entry_param)
+period = entry_param
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `period`：簡單移動平均線的窗口大小，與 `entry_param` 相同。
+- `exit_param`：出場參數，用於計算斜率的窗口大小。
+
+  計算簡單移動平均線（SMA40）
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=period).mean()
+```
+
+- 計算40期的簡單移動平均線，基於前一天的收盤價。
+
+計算斜率
+
+```python
+self.data['Slope'] = 
+self.data['SMA40'].rolling(window=exit_param).apply(lambda x: np.polyfit(range(exit_param), x, 1)[0], raw=True)
+```
+
+- 計算移動平均線在指定窗口內的斜率，使用 `numpy.polyfit` 函數進行線性回歸。
+
+向量化檢查條件
+
+```python
+self.data['Trend'] = False
+recent_slope = self.data['Slope'].rolling(window=exit_param).mean()
+self.data['Trend'] = (recent_slope < 0).shift(exit_param * 2).fillna(False)
+```
+
+- 計算最近窗口內的平均斜率。
+- 當最近的平均斜率為負時，標記為趨勢向下，並向後偏移兩倍的窗口大小以確保信號的有效性。
+
+設置進場和出場條件
+
+```python
+self.data['突破signal價'] = self.data['SMA40']
+self.data['signal'] = ((self.data['BidHigh'] > self.data['突破signal價']) & 
+                       (self.data['BidClose'] < self.data['突破signal價']) & 
+                       (self.data['Trend'] == True))
+self.data['突破signal價'] = self.data['BidClose']
+self.data['out_signal'] = ((self.data['AskOpen'] < self.data['SMA40']) & 
+                           (self.data['AskHigh'] >= self.data['SMA40']))
+self.data['出場signal價'] = self.data['SMA40']
+```
+
+- `突破signal價`：設置突破信號價為 SMA40。
+- `signal`：當最高買價高於突破信號價且收盤買價低於突破信號價，同時趨勢向下時，觸發買入信號。
+- `out_signal`：當開盤賣價低於突破信號價且最高賣價高於或等於突破信號價時，觸發出場信號。
+- 設置出場信號價為突破信號價。
+
+# **策略概述(0627增修)**
+
+## 策略代碼：
+
+[coef_signal_setter copy.py](https://prod-files-secure.s3.us-west-2.amazonaws.com/45da35f8-32f2-4dc5-91bc-96d683d09347/212890a8-dc97-4459-8370-f15561f93de3/coef_signal_setter_copy.py)
+
+### Scalpin-New (已更新需進場同一小時掛停損單) (BTC/USD, 41, 35, 0.24)
+
+- 允許同小時進出？
+
+https://www.futunn.com/hk/learn/detail-what-is-scalp-trading-72599-221003034
+
+最佳化參數（個數：2）
+
+[scalping_new_btc.xlsx](https://prod-files-secure.s3.us-west-2.amazonaws.com/45da35f8-32f2-4dc5-91bc-96d683d09347/54e8531f-9ff0-4d50-b4e8-c99311d3e8b3/scalping_new_btc.xlsx)
+
+- [x]  New
+
+```python
+entry_param = int(self.entry_param)
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `exit_param`：出場參數，用於計算高價和低價移動平均線的窗口大小。
+
+  計算簡單移動平均線
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=entry_param).mean()  # 簡單移動平均線（40）
+self.data['HighSMA2'] = self.data['AskHigh'].shift(1).rolling(window=exit_param).mean()  # 高價移動平均線（2）
+self.data['LowSMA2'] = self.data['AskLow'].shift(1).rolling(window=exit_param).mean()
+```
+
+- `SMA40`：基於前一天的收盤價計算的40期簡單移動平均線。
+- `HighSMA2`：基於前一天的最高價計算的2期高價移動平均線。
+- `LowSMA2`：基於前一天的最低價計算的2期低價移動平均線。
+
+檢查高價、低價移動平均線是否位於簡單移動平均線上方
+
+```python
+self.data['MA_band_above_SMA40'] = (self.data['HighSMA2'] > self.data['SMA40']) & (self.data['LowSMA2'] > self.data['SMA40'])
+
+```
+
+- 當高價移動平均線和低價移動平均線都位於簡單移動平均線上方時，標記為 `True`。
+
+設置進場和出場條
+
+```python
+self.data['突破signal價'] = self.data['LowSMA2']
+self.data['signal'] = (self.data['MA_band_above_SMA40'] & (self.data['AskLow'] <= self.data['LowSMA2']) & (self.data['AskOpen'] >= self.data['LowSMA2']))  # K線觸碰到低價移動平均線時進場
+self.data['out_signal'] = ((self.data['BidHigh'] >= self.data['HighSMA2'].shift(1))) | ((self.data['BidLow'] <= self.data['SMA40'].shift(1))) # 觸碰到高價移動平均線時獲利平倉  # 觸碰到簡單移動平均線時停損
+self.data['出場signal價'] = np.where(self.data['BidHigh'] >= self.data['HighSMA2'].shift(1)
+                                    , self.data['HighSMA2'].shift(1) 
+                                    , self.data['SMA40'].shift(1))
+```
+
+- `突破signal價`：設置突破信號價為低價移動平均線（LowSMA2）。
+- `signal`：當高價和低價移動平均線都位於簡單移動平均線上方，且最低賣價低於或等於低價移動平均線時，觸發買入信號。
+- `out_signal`：當最高買價高於或等於高價移動平均線，或者最低買價低於或等於簡單移動平均線時，觸發出場信號。
+- `出場signal價`：設置出場信號價為高價移動平均線或簡單移動平均線，取決於哪個條件觸發出場信號。
+
+### Scalping-New-S  (已更新需進場同一小時掛停損單)
+
+最佳化參數（個數：2）
+
+- 允許同小時進出？
+
+[scalping_new_S_btc.xlsx](https://prod-files-secure.s3.us-west-2.amazonaws.com/45da35f8-32f2-4dc5-91bc-96d683d09347/2c5f0189-3e44-4113-bfc7-d060b049977a/scalping_new_S_btc.xlsx)
+
+- [x]  New
+
+```python
+entry_param = int(self.entry_param)
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `exit_param`：出場參數，用於計算高價和低價移動平均線的窗口大小。
+
+  計算簡單移動平均線
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=entry_param).mean()  # 簡單移動平均線（40）
+self.data['HighSMA2'] = self.data['AskHigh'].shift(1).rolling(window=exit_param).mean()  # 高價移動平均線（2）
+self.data['LowSMA2'] = self.data['AskLow'].shift(1).rolling(window=exit_param).mean()
+```
+
+- `SMA40`：基於前一天的收盤價計算的40期簡單移動平均線。
+- `HighSMA2`：基於前一天的最高價計算的2期高價移動平均線。
+- `LowSMA2`：基於前一天的最低價計算的2期低價移動平均線。
+
+檢查高價、低價移動平均線是否位於簡單移動平均線下方
+
+```python
+self.data['MA_band_below_SMA40'] = (self.data['HighSMA2'] < self.data['SMA40']) & (self.data['LowSMA2'] < self.data['SMA40'])
+```
+
+- 當高價移動平均線和低價移動平均線都位於簡單移動平均線下方時，標記為 `True`。
+
+設置進場和出場條
+
+```python
+self.data['突破signal價'] = self.data['HighSMA2']
+self.data['signal'] = (self.data['MA_band_below_SMA40'] & (self.data['BidHigh'] >= self.data['HighSMA2']))  # K線觸碰到高價移動平均線時進場
+self.data['out_signal'] = (self.data['AskHigh'] >= self.data['SMA40'].shift(1)) | (self.data['AskLow'] <= self.data['LowSMA2'].shift(1)) # 觸碰到高價移動平均線時獲利平倉  # 觸碰到簡單移動平均線時停損
+self.data['出場signal價'] = np.where(self.data['AskHigh'] >= self.data['SMA40']
+                                    , self.data['SMA40'].shift(1)
+                                    , self.data['LowSMA2'].shift(1))
+```
+
+- `突破signal價`：設置突破信號價為高價移動平均線（HighSMA2）。
+- `signal`：當高價和低價移動平均線都位於簡單移動平均線下方，且最高買價高於或等於高價移動平均線時，觸發買入信號。
+- `out_signal`：當最高賣價高於或等於簡單移動平均線，或者最低賣價低於或等於低價移動平均線時，觸發出場信號。
+- `出場signal價`：設置出場信號價為簡單移動平均線或低價移動平均線，取決於哪個條件觸發出場信號。
+
+### Scalping (不須同小時掛停損，出場改Open)
+
+https://www.futunn.com/hk/learn/detail-what-is-scalp-trading-72599-221003034
+
+最佳化參數（個數：2）
+
+- [x]  New
+
+```python
+entry_param = int(self.entry_param)
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `exit_param`：出場參數，用於計算高價和低價移動平均線的窗口大小。
+
+  計算簡單移動平均線
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=entry_param).mean()  # 簡單移動平均線（40）
+self.data['HighSMA2'] = self.data['AskHigh'].shift(1).rolling(window=exit_param).mean()  # 高價移動平均線（2）
+self.data['LowSMA2'] = self.data['AskLow'].shift(1).rolling(window=exit_param).mean()
+```
+
+- `SMA40`：基於前一天的收盤價計算的40期簡單移動平均線。
+- `HighSMA2`：基於前一天的最高價計算的2期高價移動平均線。
+- `LowSMA2`：基於前一天的最低價計算的2期低價移動平均線。
+
+檢查高價、低價移動平均線是否位於簡單移動平均線上方
+
+```python
+self.data['MA_band_above_SMA40'] = (self.data['HighSMA2'] > self.data['SMA40']) & (self.data['LowSMA2'] > self.data['SMA40'])
+
+```
+
+- 當高價移動平均線和低價移動平均線都位於簡單移動平均線上方時，標記為 `True`。
+
+設置進場和出場條
+
+```python
+self.data['突破signal價'] = self.data['LowSMA2']
+self.data['signal'] = (self.data['MA_band_above_SMA40'] & (self.data['AskLow'] <= self.data['LowSMA2']) & (self.data['AskOpen'] >= self.data['LowSMA2']))  # K線觸碰到低價移動平均線時進場
+self.data['out_signal'] = ((self.data['BidOpen'] >= self.data['HighSMA2'])) | ((self.data['BidOpen'] <= self.data['SMA40'])) # 觸碰到高價移動平均線時獲利平倉  # 觸碰到簡單移動平均線時停損
+self.data['出場signal價'] = self.data['BidOpen']
+```
+
+- `突破signal價`：設置突破信號價為低價移動平均線（LowSMA2）。
+- `signal`：當高價和低價移動平均線都位於簡單移動平均線上方，且最低賣價低於或等於低價移動平均線時，觸發買入信號。
+- `out_signal`：當最高買價高於或等於高價移動平均線，或者最低買價低於或等於簡單移動平均線時，觸發出場信號。
+- `出場signal價`：設置出場信號價為高價移動平均線或簡單移動平均線，取決於哪個條件觸發出場信號。
+
+### Scalping-S
+
+最佳化參數（個數：2）
+
+- [x]  New
+
+```python
+entry_param = int(self.entry_param)
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `exit_param`：出場參數，用於計算高價和低價移動平均線的窗口大小。
+
+  計算簡單移動平均線
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=entry_param).mean()  # 簡單移動平均線（40）
+self.data['HighSMA2'] = self.data['AskHigh'].shift(1).rolling(window=exit_param).mean()  # 高價移動平均線（2）
+self.data['LowSMA2'] = self.data['AskLow'].shift(1).rolling(window=exit_param).mean()
+```
+
+- `SMA40`：基於前一天的收盤價計算的40期簡單移動平均線。
+- `HighSMA2`：基於前一天的最高價計算的2期高價移動平均線。
+- `LowSMA2`：基於前一天的最低價計算的2期低價移動平均線。
+
+檢查高價、低價移動平均線是否位於簡單移動平均線下方
+
+```python
+self.data['MA_band_below_SMA40'] = (self.data['HighSMA2'] < self.data['SMA40']) & (self.data['LowSMA2'] < self.data['SMA40'])
+```
+
+- 當高價移動平均線和低價移動平均線都位於簡單移動平均線下方時，標記為 `True`。
+
+設置進場和出場條
+
+```python
+self.data['突破signal價'] = self.data['HighSMA2']
+self.data['signal'] = (self.data['MA_band_below_SMA40'] & (self.data['BidHigh'] >= self.data['HighSMA2']))  # K線觸碰到高價移動平均線時進場
+self.data['out_signal'] = (self.data['AskOpen'] >= self.data['SMA40']) | (self.data['AskOpen'] <= self.data['LowSMA2']) # 觸碰到高價移動平均線時獲利平倉  # 觸碰到簡單移動平均線時停損
+self.data['出場signal價'] = self.data['AskOpen']
+```
+
+- `突破signal價`：設置突破信號價為高價移動平均線（HighSMA2）。
+- `signal`：當高價和低價移動平均線都位於簡單移動平均線下方，且最高買價高於或等於高價移動平均線時，觸發買入信號。
+- `out_signal`：當最高賣價高於或等於簡單移動平均線，或者最低賣價低於或等於低價移動平均線時，觸發出場信號。
+- `出場signal價`：設置出場信號價為簡單移動平均線或低價移動平均線，取決於哪個條件觸發出場信號。
+
+### Fractal  (USOilSpot, 22, 0.96) (訊號待分形雙側所需K棒後才更新突破分形價)
+
+[https://www.oanda.com/bvi-ft/lab-education/technical_analysis/fractal-how-to-use/](https://www.investopedia.com/terms/f/fractal.asp)
+
+最佳化參數（個數：2）
+
+- [x]  Adjusted 只有 `self.data['out_signal'] = self.data['BidOpen'] <= self.data['突破signal價']`
+- [ ]  當 self.data['AskHigh'] 。。
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+# 确保entry_param是奇数
+if entry_param % 2 == 0:
+    entry_param += 1
+
+half_window = entry_param // 2
+```
+
+- `entry_param`：進場參數，決定用於計算分形的窗口大小，並確保其為奇數。
+- `exit_param`：出場參數，用於調整突破信號價。
+- `half_window`：窗口的一半大小，用於計算分形。
+
+ 計算向上分形
+
+```python
+# 计算向上分形
+self.data['up_fractal'] = np.nan
+for i in range(half_window, len(self.data) - half_window):
+		is_up_fractal = True
+		for j in range(1, half_window):
+		    if (self.data['AskHigh'].iloc[i] <= self.data['AskHigh'].iloc[i - j] or
+		        self.data['AskHigh'].iloc[i] <= self.data['AskHigh'].iloc[i + j]):
+		        is_up_fractal = False
+		        break
+		if is_up_fractal:
+		    if int(i + half_window + 1) < int(len(self.data)):
+		            self.data['up_fractal'].iloc[i + half_window + 1] = self.data['AskHigh'].iloc[i]
+```
+
+- 設置 `up_fractal` 列，初始化為 NaN。
+- 使用雙重循環計算向上分形：
+    - 對於每個價格點，檢查其是否高於窗口內其他點的價格。
+    - 若該點為最高價，則標記為向上分形。
+
+設定交易信號
+
+```python
+# 设置进场和出场条件
+self.data['up_fractal'] = self.data['up_fractal'].fillna(method='ffill')
+self.data['突破signal價'] = self.data['up_fractal']*exit_param
+self.data['signal'] = self.data['AskHigh'] > self.data['突破signal價'] 
+self.data['out_signal'] = self.data['BidOpen'] <= self.data['突破signal價']
+self.data['出場signal價'] = self.data['BidOpen']
+self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+```
+
+- 將 `up_fractal` 列中的 NaN 值填充為最近的非 NaN 值。
+- 設置突破信號價為分形價格乘以出場參數。
+- 當最高賣價高於突破信號價時，觸發買入信號。
+- 當開盤買價低於或等於突破信號價時，觸發出場信號。
+- 設置出場信號價為開盤買價。
+- 根據槓桿參數和前一天的成交量計算槓桿比率。
+
+### Fractal_N
+
+[https://www.oanda.com/bvi-ft/lab-education/technical_analysis/fractal-how-to-use/](https://www.investopedia.com/terms/f/fractal.asp)
+
+- 是做多
+
+最佳化參數（個數：2）
+
+- [x]  New
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+# 确保entry_param是奇数
+if entry_param % 2 == 0:
+    entry_param += 1
+
+half_window = entry_param // 2
+```
+
+- `entry_param`：進場參數，決定用於計算分形的窗口大小，並確保其為奇數。
+- `exit_param`：出場參數，用於調整突破信號價。
+- `half_window`：窗口的一半大小，用於計算分形。
+
+ 計算向上分形
+
+```python
+# 计算向上分形
+self.data['up_fractal'] = np.nan
+self.data['down_fractal'] = np.nan
+for i in range(half_window, len(self.data) - half_window):
+    is_up_fractal = True
+    is_down_fractal = True
+    for j in range(1, half_window):
+        if (self.data['AskHigh'].iloc[i] <= self.data['AskHigh'].iloc[i - j] or
+            self.data['AskHigh'].iloc[i] <= self.data['AskHigh'].iloc[i + j]):
+            is_up_fractal = False
+        if (self.data['AskLow'].iloc[i] >= self.data['AskLow'].iloc[i - j] or
+            self.data['AskLow'].iloc[i] >= self.data['AskLow'].iloc[i + j]):
+            is_down_fractal = False
+    if is_up_fractal:
+        if int(i + half_window + 1) < int(len(self.data)):
+                self.data['up_fractal'].iloc[i + half_window + 1] = self.data['AskHigh'].iloc[i]
+    if is_down_fractal:
+        if int(i + half_window + 1) < int(len(self.data)):
+          self.data['down_fractal'].iloc[i + half_window + 1] = self.data['AskLow'].iloc[i]
+```
+
+- 設置 `up_fractal` 列，初始化為 NaN。
+- 使用雙重循環計算向上分形：
+    - 對於每個價格點，檢查其是否高於窗口內其他點的價格。
+    - 若該點為最高價，則標記為向上分形。
+
+設定交易信號
+
+```python
+# 设置进场和出场条件
+self.data['up_fractal'] = self.data['up_fractal'].fillna(method='ffill')
+self.data['down_fractal'] = self.data['down_fractal'].fillna(method='ffill')
+self.data['突破signal價'] = self.data['down_fractal']*exit_param
+self.data['signal'] = self.data['AskLow'] <= self.data['突破signal價'] 
+self.data['out_signal'] = self.data['AskHigh'] >= self.data['up_fractal']*((2-exit_param))
+self.data['出場signal價'] = self.data['up_fractal']*((2-exit_param))
+self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+```
+
+- 將 `up_fractal` 列中的 NaN 值填充為最近的非 NaN 值。
+- 設置突破信號價為分形價格乘以出場參數。
+- 當最高賣價高於突破信號價時，觸發買入信號。
+- 當開盤買價低於或等於突破信號價時，觸發出場信號。
+- 設置出場信號價為開盤買價。
+- 根據槓桿參數和前一天的成交量計算槓桿比率。
+
+### 3Levels_L2(NAS100, 51, 0.51)
+
+最佳化參數（個數：2）
+
+- [x]  New
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算價位水平的回溯期數。
+- `exit_param`：出場參數，用於計算上關價和下關價的調整比例。
+
+ 計算上、中、下價位水平
+
+```python
+self.data['upper_level'] = self.data['AskLow'].shift(1).rolling(entry_param).min() +
+                           (self.data['AskHigh'].shift(1).rolling(entry_param).max() -
+                            self.data['AskLow'].shift(1).rolling(entry_param).min()) * exit_param
+
+```
+
+設定交易信號
+
+```python
+self.data['突破signal價'] = self.data['mid_level']
+self.data['signal'] = False
+self.data['signal'] = ((self.data['AskOpen'] < self.data['mid_level']) &
+                       (self.data['AskOpen'] > self.data['lower_level']) &
+                    (self.data['AskHigh'] > self.data['mid_level']))
+```
+
+- `突破signal價`：設置突破信號價為中關價。
+- `signal`：當開盤價在中關價和下關價之間，且最高價突破中關價時，觸發多單買入信號。
+
+設定出場信號
+
+```python
+self.data['out_signal'] = ((self.data['AskOpen'] > self.data['mid_level']))
+self.data['出場signal價'] =  self.data['BidOpen']
+```
+
+- `out_signal`：當開盤價高於中關價時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤買價
+
+### 3Levels_L3-1  (NAS100, 76, 0.9)
+
+最佳化參數（個數：2）
+
+- [x]  New
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算價位水平的回溯期數。
+- `exit_param`：出場參數，用於計算上關價和下關價的調整比例。
+
+ 計算上、中、下價位水平
+
+```python
+self.data['upper_level'] = self.data['AskLow'].shift(1).rolling(entry_param).min() +
+                           (self.data['AskHigh'].shift(1).rolling(entry_param).max() -
+                            self.data['AskLow'].shift(1).rolling(entry_param).min()) * exit_param
+
+```
+
+設定交易信號
+
+```python
+self.data['突破signal價'] = self.data['lower_level']
+self.data['signal'] = False
+self.data['signal'] = ((self.data['AskOpen'] < self.data['lower_level']) &
+                    #    (self.data['AskOpen'] > self.data['lower_level']) &
+                    (self.data['AskHigh'] > self.data['lower_level']))
+
+```
+
+- `突破signal價`：設置突破信號價為下關價。
+- `signal`：當開盤價低於下關價且最高價突破下關價時，觸發多單買入信號。
+
+設定出場信號
+
+```python
+self.data['out_signal'] = ((self.data['AskOpen'] >= self.data['mid_level']))
+self.data['出場signal價'] =  self.data['BidOpen']
+```
+
+- `out_signal`：當開盤價高於或等於中關價時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤買價。
+
+### 3Levels_S  (USBANKS, 120, 0.83)
+
+最佳化參數（個數：2）
+
+- [x]  New
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算價位水平的回溯期數。
+- `exit_param`：出場參數，用於計算上關價和下關價的調整比例。
+
+ 計算上、中、下價位水平
+
+```python
+self.data['upper_level'] = self.data['BidLow'].shift(1).rolling(entry_param).min() + 
+                           (self.data['BidHigh'].shift(1).rolling(entry_param).max() - 
+                            self.data['BidLow'].shift(1).rolling(entry_param).min()) * exit_param
+```
+
+設定交易信號
+
+```python
+self.data['突破signal價'] = self.data['upper_level']
+self.data['signal'] = False
+self.data['signal'] = ((self.data['BidOpen'] > self.data['upper_level']) &
+                    (self.data['BidLow'] < self.data['upper_level']))
+```
+
+- `突破signal價`：設置突破信號價為上關價。
+- `signal`：當開盤買價高於上關價且低盤價低於上關價，觸發空單買入信號。
+
+設定出場信號
+
+```python
+self.data['out_signal'] = ((self.data['AskOpen'] < self.data['upper_level']))
+self.data['出場signal價'] =  self.data['AskOpen']   
+```
+
+- `out_signal`：當開盤買價低於上關價時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤買價。
+
+### OPEN_TREND  (BTC/USD, 2.38, 0.11, 0.17)
+
+最佳化參數（個數：2）
+
+[open_trend_btc.xlsx](https://prod-files-secure.s3.us-west-2.amazonaws.com/45da35f8-32f2-4dc5-91bc-96d683d09347/b83758ab-11a1-4afa-a913-3792c6eb823f/open_trend_btc.xlsx)
+
+- [ ]  New，未完成
+    - 看起來不是一週執行一次
+    - 從 2024-02-01 開始都沒有交易
+
+```python
+period = int(self.entry_param)
+breakthrough_prices = []
+```
+
+- `entry_param`：將進場參數設置為整數值，這個參數用於決定計算突破價格和阿隆指標的時間窗口大小。
+- `breakthrough_prices = []`：初始化一個空列表，用於存儲每個時間點的突破價格。
+
+ 計算開盤要延續上周趨勢的突破價格
+
+```python
+for i in range(len(self.data)):
+    if i == 0:
+        breakthrough_prices.append(np.nan)
+    else:
+        current_time = self.data.index[i]
+        previous_time = self.data.index[i-1]
+        time_diff = (current_time - previous_time).total_seconds() / 3600
+        if time_diff > period:  # 如果時間差超過指定的時間窗口
+            breakthrough_price = self.data['AskHigh'][i-1]  # 設為上次收盤的AskHigh
+        else:
+            breakthrough_price = np.nan
+        breakthrough_prices.append(breakthrough_price)
+
+```
+
+對數據集進行迭代：
+
+- 如果是第一個數據點，突破價格設置為 `NaN`。
+- 對於其他數據點，計算當前時間和前一時間的差異：
+    - 如果時間差超過指定的時間窗口，突破價格設置為上一次的 `AskHigh`。
+    - 否則，突破價格設置為 `NaN`。
+
+計算阿隆指標
+
+```python
+aroon_up = []
+aroon_down = []
+out_signals = []
+
+for i in range(len(self.data)):
+    if i < period:
+        aroon_up.append(np.nan)
+        aroon_down.append(np.nan)
+        out_signals.append(False)
+    else:
+        high = self.data['AskHigh'][i-period:i].max()
+        low = self.data['AskLow'][i-period:i].min()
+        aroon_up_value = ((period - (self.data['AskHigh'][i-period:i].tolist().index(high) + 1)) / period) * 100
+        aroon_down_value = ((period - (self.data['AskLow'][i-period:i].tolist().index(low) + 1)) / period) * 100
+        aroon_up.append(aroon_up_value)
+        aroon_down.append(aroon_down_value)
+
+```
+
+- 初始化 `aroon_up`、`aroon_down` 和 `out_signals` 列表。
+- 對數據集進行迭代：
+    - 如果當前索引小於指定的時間窗口，阿隆指標設置為 `NaN`，出場信號設置為 `False`。
+    - 否則，計算當前窗口內的最高價和最低價，並計算阿隆上指標和下指標的值。
+
+設定交易信號
+
+```python
+self.data['Aroon_Up'] = aroon_up
+self.data['Aroon_Down'] = aroon_down
+self.data['突破signal價'] = breakthrough_prices
+self.data['突破signal價'] = self.data['突破signal價'].fillna(0)
+
+self.data['signal'] = (self.data['AskOpen'] <= self.data['突破signal價']) & (self.data['AskHigh'] > self.data['突破signal價'])
+```
+
+- `signal`：當開盤賣價低於或等於突破信號價且最高賣價高於突破信號價時，觸發買入信號。
+- `out_signal`：當阿隆上指標小於等於阿隆下指標時，觸發出場信號。
+
+設定出場信號
+
+```python
+
+self.data['out_signal'] = np.where(self.data['Aroon_Up'] > self.data['Aroon_Down'], False, True)
+self.data['出場signal價'] = self.data['BidClose']
+
+```
+
+- `out_signal`：當近N期的阿隆指標為多方不大於空方(可能兩者皆為0)，觸發出場訊號
+- 設置出場信號價為下一小時的 `BidClose`
+
+# **策略概述(0628增修)**
+
+### Granville_L4 更新  (BTC/USD, 23, 44)
+
+最佳化參數（個數：2）
+
+- [x]  Backtest
+- [x]  Bot
+
+```python
+entry_param = int(self.entry_param)
+period = entry_param
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `period`：簡單移動平均線的窗口大小，與 `entry_param` 相同。
+- `exit_param`：出場參數，用於計算斜率的窗口大小。
+
+  計算簡單移動平均線（SMA40）
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=period).mean()
+```
+
+- 計算40期的簡單移動平均線，基於前一天的收盤價。
+
+計算斜率
+
+```python
+self.data['Slope'] = 
+self.data['SMA40'].rolling(window=exit_param).apply(lambda x: np.polyfit(range(exit_param), x, 1)[0], raw=True)
+```
+
+- 計算移動平均線在指定窗口內的斜率，使用 `numpy.polyfit` 函數進行線性回歸。
+
+向量化檢查條件
+
+```python
+self.data['Trend'] = False
+recent_slope = self.data['Slope'].rolling(window=exit_param).mean()
+previous_slope = self.data['Slope'].shift(exit_param).rolling(window=exit_param).mean()
+
+self.data['Trend'] = (recent_slope > 0) & (previous_slope < 0)
+```
+
+- 計算最近窗口內的平均斜率和前一窗口內的平均斜率。
+- 當最近的斜率為正且前一窗口內的斜率為負時，標記為趨勢反轉。
+
+設置進場和出場條件
+
+```python
+            # 設置進場和出場條件
+            self.data['突破signal價'] = self.data['SMA40']
+            self.data['signal'] = ((self.data['AskLow'] <= self.data['SMA40']) & 
+                                (self.data['AskOpen'] > self.data['SMA40']) & 
+                                (self.data['AskClose'] >= self.data['SMA40']) & 
+                                (self.data['Trend'] == True))  # K線觸碰到低價移動平均線時進場
+            self.data['突破signal價'] = self.data['AskClose']
+            self.data['out_signal'] = ((self.data['BidOpen'] > self.data['SMA40']) & 
+                                    (self.data['BidLow'] <= self.data['SMA40']))  # 觸碰到高價移動平均線時獲利平倉  # 觸碰到簡單移動平均線時停損
+            self.data['出場signal價'] = self.data['SMA40']
+            self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+```
+
+- `突破signal價`：設置突破信號價為 SMA40。
+- `signal`：當最高買價高於或等於突破信號價且開盤買價低於突破信號價，同時趨勢反轉，觸發買入信號。
+- `out_signal`：當開盤賣價低於突破信號價且最高賣價高於或等於突破信號價時，觸發出場信號。
+- 設置出場信號價為突破信號價。
+
+### Granville_L3  (BTC/USD, 110, 14)
+
+最佳化參數（個數：2）
+
+- [x]  Backtest
+- [x]  Bot
+
+```python
+entry_param = int(self.entry_param)
+period = entry_param
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `period`：簡單移動平均線的窗口大小，與 `entry_param` 相同。
+- `exit_param`：出場參數，用於計算斜率的窗口大小。
+
+  計算簡單移動平均線（SMA40）
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=period).mean()
+```
+
+- 計算40期的簡單移動平均線，基於前一天的收盤價。
+
+計算斜率
+
+```python
+self.data['Slope'] = 
+self.data['SMA40'].rolling(window=exit_param).apply(lambda x: np.polyfit(range(exit_param), x, 1)[0], raw=True)
+```
+
+- 計算移動平均線在指定窗口內的斜率，使用 `numpy.polyfit` 函數進行線性回歸。
+
+向量化檢查條件
+
+```python
+self.data['Trend'] = False
+
+# 向量化檢查條件：近int期斜率大於0且int期前的int期是斜率小於0
+recent_slope = self.data['Slope'].rolling(window=exit_param).mean()
+self.data['Trend'] = (recent_slope > 0).shift(exit_param * 2).fillna(False)
+```
+
+- 計算最近窗口內的平均斜率和前一窗口內的平均斜率。
+- 當最近的斜率為正且前一窗口內的斜率為負時，標記為趨勢反轉。
+
+設置進場和出場條件
+
+```python
+    # 設置進場和出場條件
+self.data['突破signal價'] = self.data['AskClose']
+self.data['signal'] = ((self.data['AskLow'] <= self.data['SMA40'] * 1.02) &
+            (self.data['AskLow'] > self.data['SMA40']) &
+            (self.data['AskOpen'] > self.data['SMA40'] * 1.02))  # K線觸碰到低價移動平均線時進場
+self.data['out_signal'] = ((self.data['BidOpen'] > self.data['SMA40']) &
+                (self.data['BidLow'] <= self.data['SMA40']))  # 觸碰到高價移動平均線時獲利平倉  # 觸碰到簡單移動平均線時停損
+self.data['出場signal價'] = self.data['SMA40']
+self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+```
+
+### Left_Fractal (BTC/USD, 29.25, 1.03, 0.3) (訊號待分形雙側所需K棒後才更新突破分形價)
+
+[https://www.oanda.com/bvi-ft/lab-education/technical_analysis/fractal-how-to-use/](https://www.investopedia.com/terms/f/fractal.asp)
+
+最佳化參數（個數：2）
+
+- [x]  Backtest
+- [x]  Bot
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算分形的窗口大並確保其為奇數。
+- `exit_param`：出場參數，用於調整突破信號價。
+
+ 計算向上分形
+
+```python
+self.data['up_fractal'] = np.nan
+for i in range(entry_param, len(self.data) - entry_param):
+    is_up_fractal = True
+    for j in range(1, entry_param):
+        if (self.data['AskHigh'].iloc[i] <= self.data['AskHigh'].iloc[i - entry_param]):
+            is_up_fractal = False
+            break
+    if is_up_fractal:
+        if int(i + 1) < int(len(self.data)):
+                self.data['up_fractal'].iloc[i + 1] = self.data['AskHigh'].iloc[i]
+```
+
+- 設置 `up_fractal` 列，初始化為 NaN。
+- 使用雙重循環計算向上分形：
+    - 對於每個價格點，檢查其是否高於窗口內其他點的價格。
+    - 若該點為最高價，則標記為向上分形。
+
+設定交易信號
+
+```python
+self.data['up_fractal'] = self.data['up_fractal'].fillna(method='ffill')
+self.data['突破signal價'] = self.data['up_fractal']*exit_param
+self.data['signal'] = (self.data['AskHigh'] > self.data['突破signal價']) & (self.data['AskOpen'] <= self.data['突破signal價'] )
+self.data['out_signal'] = self.data['BidOpen'] <= self.data['突破signal價']
+self.data['出場signal價'] = self.data['BidOpen']
+self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+```
+
+- 將 `up_fractal` 列中的 NaN 值填充為最近的非 NaN 值。
+- 設置突破信號價為分形價格乘以出場參數。
+- 當最高賣價高於突破信號價時，觸發買入信號。
+- 當開盤買價低於或等於突破信號價時，觸發出場信號。
+- 設置出場信號價為開盤買價。
+- 根據槓桿參數和前一天的成交量計算槓桿比率。
+
+### Left_Fractal-N (訊號待分形雙側所需K棒後才更新突破分形價)
+
+[https://www.oanda.com/bvi-ft/lab-education/technical_analysis/fractal-how-to-use/](https://www.investopedia.com/terms/f/fractal.asp)
+
+最佳化參數（個數：2）
+
+- [x]  Backtest
+- [x]  Bot (cost 紀錄)
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，決定用於計算分形的窗口大並確保其為奇數。
+- `exit_param`：出場參數，用於調整突破信號價。
+
+ 計算向上分形
+
+```python
+self.data['up_fractal'] = np.nan
+self.data['down_fractal'] = np.nan
+for i in range(entry_param, len(self.data) - entry_param):
+    is_up_fractal = True
+    is_down_fractal = True
+    for j in range(1, entry_param):
+        if (self.data['AskHigh'].iloc[i] <= self.data['AskHigh'].iloc[i - j]):
+            is_up_fractal = False
+        if (self.data['AskLow'].iloc[i] >= self.data['AskLow'].iloc[i - j]):
+            is_down_fractal = False
+    if is_up_fractal:
+        if int(i  + 1) < int(len(self.data)):
+                self.data['up_fractal'].iloc[i + 1] = self.data['AskHigh'].iloc[i]
+    if is_down_fractal:
+        if int(i  + 1) < int(len(self.data)):
+                self.data['down_fractal'].iloc[i + 1] = self.data['AskLow'].iloc[i]
+```
+
+- 設置 `up_fractal` 列，初始化為 NaN。
+- 使用雙重循環計算向上分形：
+    - 對於每個價格點，檢查其是否高於窗口內其他點的價格。
+    - 若該點為最高價，則標記為向上分形。
+
+設定交易信號
+
+```python
+self.data['up_fractal'] = self.data['up_fractal'].fillna(method='ffill')
+self.data['down_fractal'] = self.data['down_fractal'].fillna(method='ffill')
+self.data['突破signal價'] = self.data['down_fractal']*exit_param
+self.data['signal'] = (self.data['AskLow'] <= self.data['突破signal價']) & (self.data['AskOpen'] >= self.data['突破signal價'])
+
+self.data['當筆交易進場價'] = np.where((self.data['signal'].shift(1)==False)&(self.data['signal']==True), self.data['突破signal價'], np.nan)
+self.data['當筆交易進場價'].fillna(method='ffill')
+
+self.data['out_signal'] = (self.data['BidOpen'] >= self.data['當筆交易進場價']*((2-exit_param))) or (self.data['BidOpen'] <= self.data['當筆交易進場價'])
+self.data['出場signal價'] = self.data['BidOpen']
+self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+```
+
+- 將 `up_fractal` 列中的 NaN 值填充為最近的非 NaN 值。
+- 設置突破信號價為分形價格乘以出場參數。
+- 當最低賣價低於突破信號價時，觸發買入信號。
+- 當開盤買價達到停利或停損條件時，觸發出場信號。
+- 設置出場信號價為開盤買價。
+- 根據槓桿參數和前一天的成交量計算槓桿比率。
+
+### Scalping-Trend_2 (USD/JPY, 1, 35, 0.33) (均線逆勢做順勢)
+
+[https://www.oanda.com/bvi-ft/lab-education/technical_analysis/fractal-how-to-use/](https://www.investopedia.com/terms/f/fractal.asp)
+
+最佳化參數（個數：2）
+
+- [x]  Backtest
+- [x]  Bot
+
+```python
+entry_param = int(self.entry_param)
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `exit_param`：出場參數，用於計算高價和低價移動平均線的窗口大小。
+
+ 計算移動平均線
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=entry_param).mean()  # 簡單移動平均線（40）
+self.data['HighSMA2'] = self.data['AskHigh'].shift(1).rolling(window=exit_param).mean()  # 高價移動平均線（2）
+self.data['LowSMA2'] = self.data['AskLow'].shift(1).rolling(window=exit_param).mean()  # 低價移動平均線（2）
+
+```
+
+- `SMA40`：基於前一天的收盤價計算的40期簡單移動平均線。
+- `HighSMA2`：基於前一天的最高價計算的2期高價移動平均線。
+- `LowSMA2`：基於前一天的最低價計算的2期低價移動平均線。
+
+設定交易信號
+
+```python
+self.data['MA_band_below_SMA40'] = (self.data['HighSMA2'] < self.data['SMA40']) & (self.data['LowSMA2'] < self.data['SMA40'])
+
+self.data['突破signal價'] = self.data['LowSMA2']
+self.data['signal'] = (self.data['MA_band_below_SMA40'] & (self.data['AskHigh'] >= self.data['LowSMA2']) & (self.data['AskOpen'] <= self.data['LowSMA2']))  # K線觸碰到低價移動平均線時進場
+self.data['out_signal'] = (self.data['BidOpen'] >= self.data['HighSMA2']) | (self.data['BidOpen'] <= self.data['LowSMA2'])  # 觸碰到高價移動平均線時獲利平倉或停損
+self.data['出場signal價'] = self.data['BidOpen']
+self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+
+```
+
+- 當高價移動平均線和低價移動平均線都位於簡單移動平均線下方時，標記為 `True`。
+- `突破signal價`：設置突破信號價為低價移動平均線（LowSMA2）。
+- `signal`：當高價和低價移動平均線都位於簡單移動平均線下方，且最高賣價高於或等於低價移動平均線，並且開盤賣價低於或等於低價移動平均線時，觸發買入信號。
+- `out_signal`：當開盤買價高於或等於高價移動平均線，或者開盤買價低於或等於低價移動平均線時，觸發出場信號。
+- `出場signal價`：設置出場信號價為開盤買價。
+- `leverage`：根據槓桿參數和前一天的成交量計算槓桿比率。
+
+### Scalping-Trend_3 (USD/JPY, 1, 35, 0.33) (均線逆勢做順勢)
+
+[https://www.oanda.com/bvi-ft/lab-education/technical_analysis/fractal-how-to-use/](https://www.investopedia.com/terms/f/fractal.asp)
+
+最佳化參數（個數：2）
+
+- [x]  Backtest
+- [x]  Bot
+
+```python
+entry_param = int(self.entry_param)
+exit_param = int(self.exit_param)
+```
+
+- `entry_param`：進場參數，用於計算簡單移動平均線的窗口大小。
+- `exit_param`：出場參數，用於計算高價和低價移動平均線的窗口大小。
+
+ 計算移動平均線
+
+```python
+self.data['SMA40'] = self.data['AskClose'].shift(1).rolling(window=entry_param).mean()  # 簡單移動平均線（40）
+self.data['HighSMA2'] = self.data['AskHigh'].shift(1).rolling(window=exit_param).mean()  # 高價移動平均線（2）
+self.data['LowSMA2'] = self.data['AskLow'].shift(1).rolling(window=exit_param).mean()  # 低價移動平均線（2）
+
+```
+
+- `SMA40`：基於前一天的收盤價計算的40期簡單移動平均線。
+- `HighSMA2`：基於前一天的最高價計算的2期高價移動平均線。
+- `LowSMA2`：基於前一天的最低價計算的2期低價移動平均線。
+
+設定交易信號
+
+```python
+# 檢查高價、低價移動平均線是否位於簡單移動平均線上方
+self.data['MA_band_below_SMA40'] = (self.data['HighSMA2'] < self.data['SMA40']) & (self.data['LowSMA2'] < self.data['SMA40'])
+
+# 設置進場和出場條件
+self.data['突破signal價'] = self.data['LowSMA2']
+self.data['signal'] = (self.data['MA_band_below_SMA40'] & (self.data['AskHigh'] >= self.data['LowSMA2']) & (self.data['AskOpen'] <= self.data['LowSMA2']))  # K線觸碰到低價移動平均線時進場
+self.data['out_signal'] = (self.data['BidOpen'] >= self.data['SMA40']) | (self.data['BidOpen'] <= self.data['LowSMA2']) # 觸碰到高價移動平均線時獲利平倉  # 觸碰到簡單移動平均線時停損
+self.data['出場signal價'] = self.data['BidOpen']
+self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+
+```
+
+### ADX_Real_Trend (USD/JPY, 120, 0.1, 0.63)
+
+[https://www.oanda.com/bvi-ft/lab-education/technical_analysis/fractal-how-to-use/](https://www.investopedia.com/terms/f/fractal.asp)
+
+最佳化參數（個數：2）
+
+- [x]  Backtest
+- [ ]  Bot
+    - 討論（進場價格與未知資訊 AskHigh 有關）
+    
+    ```python
+    self.data['set_突破signal價'] = 
+    np.where(self.data['AskHigh'] >= self.data['previous_day_high'], 
+            self.data['previous_day_low'], np.nan)
+    self.data['突破signal價'] = self.data['set_突破signal價'].fillna(method='ffill')
+    ```
+    
+
+```python
+entry_param = int(self.entry_param)
+exit_param = self.exit_param
+```
+
+- `entry_param`：進場參數，用於計算ADX指標的窗口大小。
+- `exit_param`：出場參數，用於設置出場條件。
+
+計算True Range (TR)
+
+```python
+self.data['H-L'] = self.data['AskHigh'] - self.data['AskLow']
+self.data['H-PC'] = np.abs(self.data['AskHigh'] - self.data['AskClose'].shift(1))
+self.data['L-PC'] = np.abs(self.data['AskLow'] - self.data['AskClose'].shift(1))
+self.data['TR'] = self.data[['H-L', 'H-PC', 'L-PC']].max(axis=1)
+```
+
+- 計算當天的最高價與最低價之間的差值 (`H-L`)。
+- 計算當天的最高價與前一天的收盤價之間的絕對差值 (`H-PC`)。
+- 計算當天的最低價與前一天的收盤價之間的絕對差值 (`L-PC`)。
+- `TR` 是這三者之中的最大值，表示當天的真實波幅。
+
+計算+DM和-DM
+
+```python
+self.data['+DM'] = np.where((self.data['AskHigh'] - self.data['AskHigh'].shift(1)) > (self.data['AskLow'].shift(1) - self.data['AskLow']),
+                            self.data['AskHigh'] - self.data['AskHigh'].shift(1), 0)
+self.data['+DM'] = np.where(self.data['+DM'] < 0, 0, self.data['+DM'])
+self.data['-DM'] = np.where((self.data['AskLow'].shift(1) - self.data['AskLow']) > (self.data['AskHigh'] - self.data['AskHigh'].shift(1)),
+                            self.data['AskLow'].shift(1) - self.data['AskLow'], 0)
+self.data['-DM'] = np.where(self.data['-DM'] < 0, 0, self.data['-DM'])
+```
+
+- 計算正方向運動指標 (`+DM`) 和負方向運動指標 (`DM`)。
+- `+DM`：如果當天的最高價變動大於當天的最低價變動，則記錄該變動，否則記錄0。
+- `DM`：如果當天的最低價變動大於當天的最高價變動，則記錄該變動，否則記錄0。
+
+計算平滑后的True Range, +DI 和 -DI
+
+```python
+tr_smoothed = self.data['TR'].rolling(window=entry_param).sum()
+plus_dm_smoothed = self.data['+DM'].rolling(window=entry_param).sum()
+minus_dm_smoothed = self.data['-DM'].rolling(window=entry_param).sum()
+
+self.data['+DI'] = 100 * (plus_dm_smoothed / tr_smoothed)
+self.data['-DI'] = 100 * (minus_dm_smoothed / tr_smoothed)
+self.data['DI_diff'] = abs(self.data['+DI'] - self.data['-DI'])
+self.data['DI_sum'] = self.data['+DI'] + self.data['-DI']
+```
+
+- 計算指定窗口內的平滑真實波幅 (`tr_smoothed`)。
+- 計算指定窗口內的平滑正方向運動指標 (`plus_dm_smoothed`) 和負方向運動指標 (`minus_dm_smoothed`)。
+- `+DI` 和 `DI` 是分別計算正負方向運動指標與平滑真實波幅的比例，並乘以100。
+- 計算 `DI_diff` 和 `DI_sum`，分別表示 `+DI` 和 `DI` 之間的差值和總和。
+
+計算DX和ADX
+
+```python
+self.data['DX'] = 100 * (self.data['DI_diff'] / self.data['DI_sum'])
+self.data['ADX'] = self.data['DX'].rolling(window=entry_param).mean()
+```
+
+- `DX`：計算方向運動指數 (Directional Movement Index)。
+- `ADX`：計算指定窗口內的平均方向運動指數 (Average Directional Index)。
+
+計算前一天的最高和最低價格
+
+```python
+self.data['previous_day_low'] = self.data['AskLow'].shift(1).rolling(24).min()
+self.data['previous_day_high'] = self.data['AskHigh'].shift(1).rolling(24).max()
+```
+
+設置突破信號價
+
+```python
+self.data['set_突破signal價'] = np.where(self.data['AskHigh'] >= self.data['previous_day_high'], self.data['previous_day_low'], np.nan)
+self.data['突破signal價'] = self.data['set_突破signal價'].fillna(method='ffill')
+```
+
+- 如果當前最高價突破前一天的最高價，則設置突破信號價為前一天的最低價，否則設置為 `NaN`。
+- 將 `NaN` 填充為前一個非 `NaN` 值。
+
+設置進場和出場條件
+
+```python
+self.data['signal'] = ((self.data['ADX'].shift(1) <= 35) & 
+                       (self.data['AskLow'] <= self.data['突破signal價'].astype('float')) & 
+                       (self.data['AskOpen'] >= self.data['突破signal價'].astype('float')))
+                       
+self.data['out_signal'] = (self.data['BidOpen'] >= self.data['突破signal價'] * (1 + 3 * exit_param)) | 
+                          (self.data['BidOpen'] <= self.data['突破signal價'] * (1 - exit_param))
+self.data['出場signal價'] = self.data['BidOpen']
+
+self.data['leverage'] = self.leverage_param / self.data['V(T-1)24']
+```
+
+signal：當以下條件同時滿足時，觸發進場信號：
+
+1. 前一天的 ADX 值小於或等於 35，表示市場可能處於趨勢較弱或無趨勢狀態。
+2. 當天的最低賣價小於或等於突破信號價。
+3. 當天的開盤賣價大於或等於突破信號價。
+
+out_signal：當以下任一條件滿足時，觸發出場信號：
+
+1. 當天的開盤買價大於或等於突破信號價的 1 + 3 * exit_param 倍。
+2. 當天的開盤買價小於或等於突破信號價的 1 - exit_param 倍。

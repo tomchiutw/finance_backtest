@@ -1,0 +1,31 @@
+
+import pandas as pd
+import generallib.general as gg
+
+class EquitySeries:
+    def __init__(self,commodity,interval,strategy_name,var_name,data,changable_var_dict_for_folder=dict()):
+        '''
+        Parameters:
+            strategy_name(str)
+            data(series)
+        
+        '''
+        self.commodity=commodity
+        self.interval=interval
+        self.strategy_name=strategy_name
+        self.var_name=var_name
+        self.changable_var_dict_for_folder=changable_var_dict_for_folder
+        self.strategy_code=f'{self.commodity.name}_{self.strategy_name}_{self.var_name}_{self.interval}'
+        self.data=data
+
+        # 如何定位?
+
+        
+    def resample_series(self,portfolio_backtest_start_date,portfolio_backtest_end_date,portfolio_optimizer_interval):
+        self.data.dropna(inplace=True)
+        self.data=self.data.resample(gg.change_interval_for_date_range(portfolio_optimizer_interval)).asfreq()
+        self.data = self.data.ffill()
+        
+        return self.data
+
+    

@@ -1,0 +1,122 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Apr 23 14:41:12 2024
+
+@author: user
+"""
+
+import sys
+import os
+import pandas as pd
+import numpy as np
+from datetime import datetime
+
+# import self module
+import backtestlib.commodity as bc
+import generallib.general as gg
+import generallib.plot as gp
+import backtestlib.performance as bp
+import backtestlib.account as ba
+import backtestlib.order as bo
+import backtestlib.folder as bf
+import backtestlib.tradingpanel as bt
+import backtestlib.inventory as bi
+import backtestlib.marketdata as bm
+import backtestlib.kline as bk
+import generallib.error_pop as ep
+
+
+# for backtest
+def single_commodity_single_marketdata_single_interval_backtest(backtest_start_date,backtest_end_date,marketdata,interval,account,tradingpanel,plotter,folder,show_balance=True):
+    '''
+    before backtest, user must set basic information in order in the main py:
+        plotter->account->backtest_range->commodity->marketdata->indicator->tradingpanel->folder
+
+    '''
+    try:
+        
+        do_count=False
+        # start backtest
+        backtest_date_range=gg.get_backtest_date_range(backtest_start_date,backtest_end_date,interval)
+        
+        for time_index in backtest_date_range:
+            
+            if  time_index not in marketdata.data[interval].index :
+                continue
+            #  to prevent none of data in marketdata include in backtest_date_range
+            do_count=True
+            
+            # folder, include entry,close condition and order
+            getattr(folder,folder.name)(time_index)
+            
+            # update order and ticket in specific most tiny interval
+            for order in account.orderbook.orders.values():
+                # skip if order dealed before
+                if order.status==1:
+                    continue
+                check_order_deal=order.check_order_deal_and_add_ticket(time_index,tradingpanel,interval)
+                # check_order_deal is 1 if new order dealed and new ticket added, else 2 or 0
+                if check_order_deal==0:
+                    continue
+                # updata ticket to transactions only if new transaction should be added, checked by check_order_deal
+                ticket_dict_name=bi.get_ticket_dict_name(order)
+                account.inventory.first_in_first_out_by_ticket_dict_name(ticket_dict_name)
+            
+            
+            # update only once in one time_index
+            # update inventory market value at close
+            total_unrealized_pnl=account.inventory.update_tickets_unrealized_pnl(time_index,tradingpanel,interval)
+            account.update_account()
+            # update dict or df for showing in tradingpanl
+            orderbook_dict=tradingpanel.update_orderbook_details(time_index,account.orderbook.orders.values())
+            inventory_dict=tradingpanel.update_inventory_details(time_index,account.inventory.tickets.values())
+            historical_transactions_dict=tradingpanel.update_historical_transactions_details(time_index,account.historical_transactions.transactions.values())
+            account_details=tradingpanel.update_account_details(time_index)
+        
+        
+        # none of data in marketdata include in backtest_date_range
+        if do_count==False:
+            raise ValueError('none of data in marketdata include in backtest_date_range. Please get more data for marketdata.')
+        
+        # plot and performance
+        if show_balance:
+            plt_balance=plotter.plot_one_df(account_details,'balance')
+        performance_series=bp.getPortfolio_Series(account_details,'balance',0.02)
+    
+        # return dict
+        
+        return_dict={
+            'account':account_details,
+            'orderbook':orderbook_dict, 
+            'inventory':inventory_dict,
+            'historical_transactions':historical_transactions_dict,
+            'performance':performance_series}
+        
+        # end backtest
+        print('backtest success')
+        
+        return return_dict
+    
+    except ValueError as e:
+        print(f"Error during backtest: {e}")
+        return_dict = {
+            'account':account_details,
+            'orderbook':orderbook_dict, 
+            'inventory':inventory_dict,
+            'historical_transactions':historical_transactions_dict,
+            'error': str(e)
+            }
+        ep.show_error_message(e)
+        return return_dict
+    
+    except Exception as e:
+        print(f"Unexpected error during backtest: {e}")
+        return_dict = {
+            'account': account_details,
+            'orderbook': orderbook_dict, 
+            'inventory': inventory_dict,
+            'historical_transactions': historical_transactions_dict,
+            'error': str(e)  # 添加错误消息
+        }
+        ep.show_error_message(e)
+        return return_dict

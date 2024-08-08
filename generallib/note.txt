@@ -1,0 +1,7 @@
+general.py:
+	Functions:
+	    append_path_include_module():
+   	    get_script_dir():
+	    get_file_path_for_saving
+    	    save_df_to_excel
+
