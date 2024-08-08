@@ -39,25 +39,25 @@ test_list=[100]
 
 
 for i in test_list:
-    for year in range(2023,2024):
-        backtest_start_date=datetime(year,1,1,0,0)
-        backtest_end_date=datetime(year+1,12,31,0,0)
-        if year==2023:
-            backtest_end_date=datetime(year+1,1,10,0,0)
+    for year in range(2021,2025):
+        backtest_start_date=datetime(year-1,1,1,0,0)
+        backtest_end_date=datetime(year,12,31,0,0)
+        if year==2024:
+            backtest_end_date=datetime(year,6,1,0,0)
         
         # net_values_df
-        xls=f'C:\\Users\\user\\miniconda3\\envs\\Finance_Backtest\\finance_backtest\\pgl_show\\{year}_net_values.csv'
+        xls=f'C:\\Users\\user\\miniconda3\\envs\\Finance_Backtest\\finance_backtest\\pgl_show\\{year-1}_net_values.csv'
         net_values_df=pd.read_csv(xls,index_col=0)
         # net_values_df=net_values_df.iloc[:,250:255]
         net_values_df.index = pd.to_datetime(net_values_df.index)
 
         strings_to_exclude = [
             '1H-HIGH-OPEN', '1H-CLOSE-LOW', '1H-S', 'L1-OLD', 'L1-NEW', 'S1',
-            '8H115', '8H24', '24H115', '24H24', 'L2', 'L3'
+            '8H115', '8H24', '24H115', '24H24', 'L2', 'L3','Booling_S'
         ]
         # strings_to_exclude =[]
         
-        cols_to_drop = []
+        cols_to_drop=[]
         
         for col in net_values_df.columns:
             # 找到最右边的 '_'
@@ -75,35 +75,42 @@ for i in test_list:
                 if 'VOLX' in right_part:
                     cols_to_drop.append(col)
                     continue
-        
+
         # 删除指定的列
         net_values_df.drop(columns=cols_to_drop, inplace=True)     
         
         
         
         changable_var_dict=dict()
-        changable_var_dict['take_profit_perventage']=0.3
-        changable_var_dict['days_for_take_profit_perventage']=5
-        changable_var_dict['n']=i
-        changable_var_dict['idx_start']=0
-        changable_var_dict['days_for_rebalance_steps']=60
-        portfolio_optimizer=popo.PortfolioOptimizer(method='TOP_N_EQUALLY_DIVIDE_AND_CHECK_POSITIVE_R_THEN_REBALANCE', \
+        changable_var_dict['n']=100
+        changable_var_dict['acceptable_mdd']=-0.3
+        changable_var_dict['acceptable_r']=0
+        changable_var_dict['stop_loss_percentage'] = 0.3
+        changable_var_dict['days_for_stop_loss'] = 5
+        changable_var_dict['idx_start'] = 0
+        changable_var_dict['days_for_rebalance_steps'] = 60
+        changable_var_dict['first_step_method'] = 'TOP_N_EQUALLY_DIVIDE_AND_FILTERED_BY_MDD_AND_R'
+        # for 
+        portfolio_optimizer=popo.PortfolioOptimizer(method='DO_METHOD_AND_STOP_LOSS', \
                                                     interval=portfolio_optimizer_interval,previous_steps=370,rebalance_steps=1,changable_var_dict=changable_var_dict) 
-        
+
         # 2 portfolio_optimizer.observed_df
-        portfolio_optimizer.observed_df=net_values_df[backtest_start_date:backtest_end_date]
+        # portfolio_optimizer.observed_df=net_values_df[backtest_start_date:backtest_end_date]
+        # !!!!!!!!
+        portfolio_optimizer.observed_df=net_values_df[:backtest_end_date]
+        # !!!!!!!!
         # 3 start portfolio_optimizer_backtest
         portfolio_optimizer_results=portfolio_optimizer.portfolio_backtest(backtest_start_date, backtest_end_date,start_balance=100000,show_method=True,show_equityseries=False,show_details=True)
-        
+ 
         # save
-        # file_name=f'{portfolio_optimizer.method}_{i}_{portfolio_optimizer.previous_steps}_{portfolio_optimizer.rebalance_steps}_{year+1}'
-        file_name=f'{portfolio_optimizer.method}_{i}_{portfolio_optimizer.previous_steps}_{portfolio_optimizer.rebalance_steps}_{year+1}'
+        # file_name=f'{portfolio_optimizer.method}_{i}_{portfolio_optimizer.previous_steps}_{portfolio_optimizer.rebalance_steps}_{year}'
+        file_name=f'{portfolio_optimizer.method}_{i}_{portfolio_optimizer.previous_steps}_{portfolio_optimizer.rebalance_steps}_{year}'
         # portfolio_optimizer_method_results[file_name]=portfolio_optimizer_results
         gg.save_var_to_pickle(portfolio_optimizer_results, dir_list=['pgl_index','strategy_5111'], file_name=file_name)
-        perfromance_df[file_name]=portfolio_optimizer_results['performance']
+        perfromance_df[year]=portfolio_optimizer_results['performance']
         
         # others
         # gp.plot_all_columns_together(portfolio_optimizer_results['summary_df'],bold_list=[portfolio_optimizer.method])
-        gl.line_notify(f'{year+1},{file_name} success')
+        gl.line_notify(f'{year},{file_name} success')
     
 

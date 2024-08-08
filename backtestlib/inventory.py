@@ -152,8 +152,16 @@ class Inventory:
                     first_short_ticket=ticket
                     continue
         if first_long_ticket is not None and first_short_ticket is not None:
-            
-            if first_long_ticket.order.deal_time < first_short_ticket.order.deal_time:
+            # if can't sort by time, then sort by order.num
+            if first_long_ticket.order.deal_time == first_short_ticket.order.deal_time:
+                if first_long_ticket.order.num<first_short_ticket.order.num:
+                    return {'Open': first_long_ticket, 'Close': first_short_ticket}
+                elif first_long_ticket.order.num>first_short_ticket.order.num:
+                    return {'Open': first_short_ticket, 'Close': first_long_ticket}
+                else:
+                    raise ValueError("Cant identify long or short first deal by order.deal_time or order.num ")
+            # sort by time
+            elif first_long_ticket.order.deal_time < first_short_ticket.order.deal_time:
                 return {'Open': first_long_ticket, 'Close': first_short_ticket}
             else:
                 return {'Open': first_short_ticket, 'Close': first_long_ticket}

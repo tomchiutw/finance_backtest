@@ -29,7 +29,7 @@ class MyEncoder(json.JSONEncoder):
             return obj.strftime('%Y-%m-%d %H:%M:%S') if isinstance(obj, datetime.datetime) else obj.strftime('%Y-%m-%d')
         
         return json.JSONEncoder.default(self, obj)
-    
+
 def append_path_include_module():
     '''
     This function is used for appending module in same directory
@@ -129,7 +129,7 @@ def get_backtest_date_range(backtest_start_date,backtest_end_date,interval):
     
 def get_first_in_first_out_list(list_1,list_2):
     if not list_1 or not list_2:
-        print('finish')
+        # print('finish')
         return
     
     if list_1[0]>list_2[0]:
@@ -144,11 +144,12 @@ def get_first_in_first_out_list(list_1,list_2):
         list_1.pop(0)
         list_2.pop(0)
         
-    print(f'{list_1},{list_2}')
+    # print(f'{list_1},{list_2}')
     if list_1 and list_2:
         get_first_in_first_out_list(list_1,list_2)
     else:
-        print('finish')
+        pass
+        # print('finish')
         
 def save_var_to_pickle(var, dir_list, file_name):
     script_dir = gbd.get_base_dir()

@@ -89,19 +89,88 @@ class PortfolioOptimizer:
         return self.current_weight
 # =============================================================================
 
-    # !!!!!!!!!!!!!weight must include all self.template_data.columns!!!!!!!!!!!!!!!
-    def TOP_N_EQUALLY_DIVIDE_AND_CHECK_POSITIVE_R_THEN_REBALANCE(self,idx,time_index):
+    # !!! weight must include all self.template_data.columns
+    # !!! beware of same variable name in changable_var_dict
+    def TOP_N_EQUALLY_DIVIDE_AND_FILTERED_BY_MDD_AND_R(self,idx,time_index):
+        '''
+        
+        changable_var_dict=dict()
+        changable_var_dict['n']=100
+        changable_var_dict['acceptable_mdd']=-0.2
+        changable_var_dict['acceptable_r']=0
+
+        '''
+        performance_df=pd.DataFrame()
+        try:
+            n=self.changable_var_dict['n']
+            acceptable_mdd=self.changable_var_dict['acceptable_mdd']
+            acceptable_r=self.changable_var_dict['acceptable_r']
+
+        except KeyError as e:
+            raise ValueError(f'Missing variable when creating PortfolioOptimizer: {e}')
+                   
+        # process r
+        r_dict=dict()
+        strategy_list=self.template_data.columns
+        self.template_data=self.template_data.dropna()
+        
+        for col in strategy_list:
+            col_index=self.template_data.columns.get_loc(col)
+            r=(self.template_data.iloc[-1,col_index]-self.template_data.iloc[0,col_index])/self.template_data.iloc[0,col_index]
+            r_dict[col]=r
+
+        # check n 
+        if len(r_dict)<n:
+            raise ValueError(f'top n :{n} is larger than len(r_dict):{len(r_dict)}')
+        sorted_r_dict_in_list = sorted(r_dict.items(), key=lambda item: item[1], reverse=True)
+        # cols_to_append
+        cols_to_append=[]
+        for index,item in enumerate(sorted_r_dict_in_list):
+            key,value=item
+            # value<=acceptable_r
+            if value<=acceptable_r:
+                break
+            # mdd
+            mdd_df=self.observed_df.loc[:time_index,key].to_frame()
+            performance_temp=bp.getPortfolio_Series(df=mdd_df,profitPercentage_Col=key,rf=0.02,translate=False)
+            mdd=performance_temp.loc['max_drawdown',key]
+            if mdd>acceptable_mdd and value>acceptable_r :
+                cols_to_append.append(key)
+                print(f'{index}, {key}, r: {value:.2f}, mdd:{mdd:.2f}')
+            
+            if len(cols_to_append)==n:
+                break
+                
+        
+        weight={name:1/n if name in cols_to_append else 0 for name in r_dict}
+        
+        weight=self.sum_weight_equal_one_with_cash(weight)
+        
+        return weight    
+        
+        
+    def DO_METHOD_AND_TAKE_PROFIT(self,idx,time_index):
         '''
         changable_var_dict['idx_start'] set 0 at main.py
-
+        ex.
+        # for take profit method
+        changable_var_dict['take_profit_perventage']=0.3
+        changable_var_dict['days_for_take_profit_perventage']=5
+        changable_var_dict['idx_start']=0
+        changable_var_dict['days_for_rebalance_steps']=60
+        changable_var_dict['first_step_method']='TOP_N_SHARPE_RATIO_EQUALLY_DIVIDE'
         '''
         try:
             take_profit_perventage=self.changable_var_dict['take_profit_perventage']
             days_for_take_profit_perventage=self.changable_var_dict['days_for_take_profit_perventage']
             days_for_rebalance_steps=self.changable_var_dict['days_for_rebalance_steps']
             idx_start=self.changable_var_dict['idx_start']
+            first_step_method=self.changable_var_dict['first_step_method']
         except KeyError as e:
             raise ValueError(f'Missing variable when creating PortfolioOptimizer: {e}')
+        # check first_step_method
+        if not hasattr(self,first_step_method):
+            raise ValueError
         # idx
         if idx_start==0:
             idx_start=idx
@@ -112,7 +181,8 @@ class PortfolioOptimizer:
         # if idx_count % days_for_rebalance_steps == 0:
         if idx_count % days_for_rebalance_steps == 0:
             print(f'{idx_count} need rebalance')
-            weight=self.TOP_N_EQUALLY_DIVIDE(idx,time_index)
+            first_step_method_function=getattr(self,first_step_method)
+            weight=first_step_method_function(idx,time_index)
             return weight
         
             
@@ -126,7 +196,7 @@ class PortfolioOptimizer:
             for col in rebalanced_df_list:
                 col_index = self.rebalanced_df.columns.get_loc(col)
                 initial_value = self.rebalanced_df.iloc[-days_for_take_profit_perventage-1, col_index]
-                
+                # get previous value and prevent 0
                 for i in range(-days_for_take_profit_perventage-1, -1):
                     previous_value = self.rebalanced_df.iloc[i, col_index]
                     if previous_value != 0:
@@ -142,7 +212,6 @@ class PortfolioOptimizer:
             weight = self.current_weight
             for col in cols_to_zero:
                 weight[col] = 0
-            # breakpoint()
             weight = self.sum_weight_equal_one_with_cash(weight)
             
             return weight
@@ -152,6 +221,79 @@ class PortfolioOptimizer:
         weight=self.sum_weight_equal_one_with_cash(weight)
         return weight
         
+    def DO_METHOD_AND_STOP_LOSS(self, idx, time_index):
+        '''
+        changable_var_dict['idx_start'] set 0 at main.py
+        ex.
+        # for stop loss method
+        changable_var_dict['stop_loss_percentage'] = 0.1
+        changable_var_dict['days_for_stop_loss'] = 5
+        changable_var_dict['idx_start'] = 0
+        changable_var_dict['days_for_rebalance_steps'] = 60
+        changable_var_dict['first_step_method'] = 'TOP_N_SHARPE_RATIO_EQUALLY_DIVIDE'
+        '''
+        try:
+            stop_loss_percentage = self.changable_var_dict['stop_loss_percentage']
+            days_for_stop_loss = self.changable_var_dict['days_for_stop_loss']
+            days_for_rebalance_steps = self.changable_var_dict['days_for_rebalance_steps']
+            idx_start = self.changable_var_dict['idx_start']
+            first_step_method = self.changable_var_dict['first_step_method']
+        except KeyError as e:
+            raise ValueError(f'Missing variable when creating PortfolioOptimizer: {e}')
+        
+        # check first_step_method
+        if not hasattr(self, first_step_method):
+            raise ValueError(f"No method called {first_step_method} in class PortfolioOptimizer")
+        
+        # idx
+        if idx_start == 0:
+            idx_start = idx
+            self.changable_var_dict['idx_start'] = idx_start
+            print(f'start: {idx_start} {time_index}')
+        idx_count = idx - idx_start
+        
+        # if idx_count % days_for_rebalance_steps == 0:
+        if idx_count % days_for_rebalance_steps == 0:
+            print(f'{idx_count} need rebalance')
+            first_step_method_function = getattr(self, first_step_method)
+            weight = first_step_method_function(idx, time_index)
+            return weight
+        
+        # if r < -stop_loss_percentage, do everyday
+        rebalance_needed = False 
+        cols_to_zero = []
+        if idx_count >= days_for_stop_loss:
+            print(f'{idx_count} r check')
+            rebalanced_df_list = [col for col in self.rebalanced_df.columns if not (self.rebalanced_df.loc[time_index, col] == 0 or col == self.method or col == 'Cash')]
+            for col in rebalanced_df_list:
+                col_index = self.rebalanced_df.columns.get_loc(col)
+                initial_value = self.rebalanced_df.iloc[-days_for_stop_loss - 1, col_index]
+                
+                for i in range(-days_for_stop_loss - 1, -1):
+                    previous_value = self.rebalanced_df.iloc[i, col_index]
+                    if previous_value != 0:
+                        break
+                r = (self.rebalanced_df.iloc[-1, col_index] - previous_value) / previous_value
+                # breakpoint()
+                if r <= -stop_loss_percentage:
+                    cols_to_zero.append(col)
+                    rebalance_needed = True
+                    print(f'{idx_count},{time_index}, {col}, {r:.2f}, rebalanced')
+                    
+        if rebalance_needed:
+            weight = self.current_weight
+            for col in cols_to_zero:
+                weight[col] = 0
+            # breakpoint()
+            weight = self.sum_weight_equal_one_with_cash(weight)
+            
+            return weight
+            
+        # if just need return last weight
+        weight = self.current_weight
+        weight = self.sum_weight_equal_one_with_cash(weight)
+        return weight
+
         
     def EQUALLY_DIVIDE(self,idx,time_index):
         '''
@@ -476,7 +618,7 @@ class PortfolioOptimizer:
                         rebalanced_df.iloc[rebalanced_df_row_loc,rebalanced_df_col_loc]= \
                         rebalanced_df.iloc[rebalanced_df_row_loc-1,rebalanced_df_col_loc]*(1+simple_return) 
                     else:
-                        raise ValueError(f'length of self.template_data is {len(self.template_data)}, not enough for calculating simple return')
+                        raise ValueError(f'length of self.observed_df is {len(self.observed_df)}, not enough for calculating simple return')
                 # 6 sum all col to portfolio_optimizer.method, and update cash
                 rebalanced_df.loc[time_index,self.method]=rebalanced_df.loc[time_index].sum()
                 # update rebalanced_df

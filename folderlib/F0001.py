@@ -62,6 +62,7 @@ class F0001(ff.Folder):
             spread=self.changable_var_dict['spread']
             long_entry_percentage=self.changable_var_dict['long_entry_percentage']
             long_close_percentage=self.changable_var_dict['long_close_percentage']
+            long_stop_percentage=self.changable_var_dict['long_stop_percentage']
             settlement=self.changable_var_dict['settlement']
             leverage=self.changable_var_dict['leverage']
             liability_percentage=self.changable_var_dict['liability_percentage']
@@ -133,6 +134,7 @@ class F0001(ff.Folder):
             spread=self.folder_dict['spread']
             long_entry_percentage=self.folder_dict['long_entry_percentage']
             long_close_percentage=self.folder_dict['long_close_percentage']
+            long_stop_percentage=self.folder_dict['long_stop_percentage']
             settlement=self.folder_dict['settlement']
             leverage=self.folder_dict['leverage']
             liability=self.folder_dict['liability']
@@ -180,6 +182,8 @@ class F0001(ff.Folder):
             entry_condition4=indicator_settlement_dates.data.loc[time_index,'Days_To_Next_Settlement_Dates']>settlement
             entry_condition5=last_spot_close<last_future_close*(1+spread)
             entry_condition6=last_spot_close>last_future_close*(1+long_entry_percentage)
+            entry_condition7=last_future_close*(1-long_stop_percentage)<open_price
+    
 
 
 
@@ -187,23 +191,23 @@ class F0001(ff.Folder):
             del_condition1=any(order.order_type=='stop' for order in account.orderbook.orders.values())
             
             
-            # short del stop order
+            # del stop order
             if del_condition1:
                 stop_order_nums=[order.num for order in account.orderbook.orders.values() if order.order_type=='stop' and order.status!=1]
                 for num in stop_order_nums:
                     account.orderbook.del_order(num,show_del_order=False)
             # short_entry order
-            if entry_condition1 and entry_condition2 and entry_condition3 and entry_condition4 and entry_condition5  \
-                :
-                open_quantity=math.floor(leverage*(account.balance+liability)/(commodity_future.contract_size*open_price+commodity_future.fee))
-                if open_quantity!=0:
-                    order_1=account.orderbook.add_order('short',commodity_future,marketdata_future.contract,'market','short',self,time_index,quantity=open_quantity,price=0,remark='short_entry')
-            
-            # long_entry order
-            # if entry_condition3 and entry_condition4 and entry_condition6:
+            # if entry_condition1 and entry_condition2 and entry_condition3 and entry_condition4 and entry_condition5  \
+            #     :
             #     open_quantity=math.floor(leverage*(account.balance+liability)/(commodity_future.contract_size*open_price+commodity_future.fee))
             #     if open_quantity!=0:
-            #         order_1=account.orderbook.add_order('long',commodity_future,marketdata_future.contract,'market','long',self,time_index,quantity=open_quantity,price=0,remark='long_entry')
+            #         order_1=account.orderbook.add_order('short',commodity_future,marketdata_future.contract,'market','short',self,time_index,quantity=open_quantity,price=0,remark='short_entry')
+            
+            # long_entry order
+            if entry_condition3 and entry_condition4 and entry_condition6:
+                open_quantity=math.floor(leverage*(account.balance+liability)/(commodity_future.contract_size*open_price+commodity_future.fee))
+                if open_quantity!=0:
+                    order_1=account.orderbook.add_order('long',commodity_future,marketdata_future.contract,'market','long',self,time_index,quantity=open_quantity,price=0,remark='long_entry')
             # ---------------------------------------------
             bb.single_interval_backtest_used_in_folder(time_index,account,tradingpanel,interval)
             # ---------------------------------------------------
@@ -214,7 +218,9 @@ class F0001(ff.Folder):
             close_condition2=indicator_settlement_dates.data.loc[time_index,'Days_To_Next_Settlement_Dates']<=settlement+1
             close_condition3=net_position>0
             close_condition4=spot_close<=close_price*(1+long_close_percentage)
-
+            close_condition5=last_future_close*(1-long_stop_percentage)>low_price
+            
+            
             # short_close_order
             if close_condition1:
                 if not close_condition2:
@@ -231,9 +237,10 @@ class F0001(ff.Folder):
                         order_2=account.orderbook.add_order('buytocover',commodity_future,marketdata_future.contract,'market on closing order','long',self,time_index,quantity=close_quantity,price=0,remark='short_close_settle')
             # long_close_order
             if close_condition3:
-                if not close_condition2 and close_condition4 :
-                    close_quantity=abs(net_position)
-                    order_2=account.orderbook.add_order('sell',commodity_future,marketdata_future.contract,'market on closing order','short',self,time_index,quantity=close_quantity,price=0,remark='long_close')
+                if not close_condition2:
+                    if close_condition4 :
+                        close_quantity=abs(net_position)
+                        order_2=account.orderbook.add_order('sell',commodity_future,marketdata_future.contract,'market on closing order','short',self,time_index,quantity=close_quantity,price=0,remark='long_close')
                 elif close_condition2:
                     close_quantity=abs(net_position)
                     order_2=account.orderbook.add_order('sell',commodity_future,marketdata_future.contract,'market on closing order','short',self,time_index,quantity=close_quantity,price=0,remark='long_close_settle')

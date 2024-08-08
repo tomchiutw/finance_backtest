@@ -36,15 +36,18 @@ backtest_results=dict()
 optimize_results=dict()
 # ---------------------------
 # entry_percentage
-short_entry_percentage=0.10
-short_close_percentage=0.10
+sid=0.05
+short_entry_percentage=sid
+short_close_percentage=sid
 short_close_percentage_2=0.03
 spread=0
-long_entry_percentage=0.15
-long_close_percentage=0.15
+lid=0.15
+long_entry_percentage=lid
+long_close_percentage=lid
+long_stop_percentage=lid
 settlement=1
 # leverage
-leverage=1.5
+leverage=0.2
 # liability
 liability_percentage=0
 # create main account
@@ -98,6 +101,7 @@ for year in range(start_year,end_year,n_steps):
                         'spread':spread,
                         'long_entry_percentage':long_entry_percentage,
                         'long_close_percentage':long_close_percentage,
+                        'long_stop_percentage':long_stop_percentage,
                         'settlement':settlement,
                         'leverage':leverage,
                         'liability_percentage':liability_percentage
