@@ -7,6 +7,7 @@ from datetime import datetime
 # import self module
 import backtestlib.commodity as bc
 from backtestlib.commodity import CommodityList
+from datetime import timedelta
 import generallib.general as gg
 import generallib.line as gl
 import generallib.plot as gp
@@ -27,112 +28,87 @@ script_dir=gbd.get_base_dir()
 
 
 # save_default equityseries_info and test
-# pes.EquitySeriesDict.create_default_equityseries_info()
-# test1=pes.EquitySeriesDict.get_equityseries_info()
-# test2=pes.EquitySeriesDict.get_data_info(nums_to_load=[])
+# pes.EquitySeriesList.create_default_equityseries_info(confirm_execution=True)
+# test1=pes.EquitySeriesList.get_equityseries_info()
+# test2=pes.EquitySeriesList.get_data_info(hash_value_to_load=[i for i in range(5)])
 
 
- 
+breakpoint()
 
 # net values
 net_values_df=pd.DataFrame()
 csv_list=[2020,2021,2022,2023]
 col_dict=dict()
+# start process
+data_info=[]
+equityseries_info=[] 
 for year in csv_list:    
+    equityseries_name=[]
+    net_values_df=pd.DataFrame()
     xls=f'C:\\Users\\user\\miniconda3\\envs\\Finance_Backtest\\finance_backtest\\pgl_show\\{year}_net_values.csv'
     net_values=pd.read_csv(xls,index_col=0)
     net_values.index = pd.to_datetime(net_values.index)
     
-    col_dict[year]=net_values.columns.tolist()
-    existing_columns = net_values_df.columns.tolist()
     for col in net_values.columns:
-        # If the column is not already in net_values_df, add it
-        if col not in existing_columns:
-            net_values_df[col] = net_values[col]
+        net_values_df[col] = net_values[col]
 
-common_elements = set(col_dict[2020]).intersection(col_dict[2021], col_dict[2022], col_dict[2023])
-common_equityseries_for_test=[]
-# equityseries_name
-equityseries_name=net_values_df.columns.tolist()
-# performance
-performance_summary=dict()
+    # equityseries_name
+    equityseries_name=net_values_df.columns.tolist()
+    # strategyname
+    error_name=[]
+    # process equityseries_name
+    for item in equityseries_name:
+        changable_var_dict_for_folder=dict()
+        changable_var_dict_for_folder['optimize_year']=str(year)
+        # find rightest "_"
+        last_underscore_index = item.rfind('_')
+        if last_underscore_index != -1:
+            try:
+                folder_name = item[:last_underscore_index]
+                commodity_var = item[last_underscore_index + 1:]
+                interval='1d'
+                if '.' in commodity_var:
+                    commodity, n = commodity_var.split('.')
+                    changable_var_dict_for_folder['n']=n
+                else:
+                    commodity=commodity_var
+                check_equityseries_exists= \
+                    pes.EquitySeriesList.check_equityseries_exists(commodity, interval, folder_name, changable_var_dict_for_folder)
+                # save
+                if not check_equityseries_exists:
+                    
+                    # turn to df
+                    data=net_values_df[item]
+                    source='pgl'
+                    
+                    equityseries_info_params=pes.EquitySeriesList.create_new_equityseries_params(commodity, interval, folder_name, data, source,changable_var_dict_for_folder, note='')
+                else:
+                    print(f'{commodity}, {interval}, {folder_name} existed in equityseries dict')
+                    
+            except Exception as e:
+                error_name.append(item)
+                raise ValueError(f'{e}')
+                
+            
+            # update equityseries_info
+            # data
+            data_info.append(copy.deepcopy(equityseries_info_params))
+            # info
+            append_dict=copy.deepcopy(equityseries_info_params)
+            del append_dict['data']
+            equityseries_info.append(append_dict)
 
-for year,col_list in col_dict.items():
-    df=pd.DataFrame()
-    for col in col_list:
-        equity_series=net_values_df.loc[datetime(year+1,1,1):datetime(year+1,6,1),col]
-        initial_value = equity_series.iloc[0]
-        final_value = equity_series.iloc[-1]
-        annual_return = (final_value - initial_value) / initial_value
-        df[col] = [annual_return]
-    performance_summary[year] = df
-    
-filepath=f'C:\\Users\\user\\miniconda3\\envs\\Finance_Backtest\\finance_backtest\\backtest_result\\pgl_index\\0718\\performance_{year}.xlsx'
-with pd.ExcelWriter(filepath) as writer:
-    for year, df in performance_summary.items():
-        df.to_excel(writer, sheet_name=str(year), index=False)
+
+        
+print(f' error_name: {len(error_name)}')
 
 # check
 check=False
 if check==False:
-    sys.exit("stop")
-
-# start process
-data_info=[]
-equityseries_dict=pes.EquitySeriesDict()
-# strategyname
-error_name=[]
-for item in equityseries_name:
-    temp_dict=dict()
-    changable_var_dict_for_folder=dict()
-    # 找到最后一个下划线的位置
-    last_underscore_index = item.rfind('_')
-    if last_underscore_index != -1:
-        try:
-            folder_name = item[:last_underscore_index]
-            commodity_var = item[last_underscore_index + 1:]
-            interval='1d'
-            if '.' in commodity_var:
-                commodity, n = commodity_var.split('.')
-                changable_var_dict_for_folder['n']=n
-            else:
-                commodity=commodity_var
-            check_equityseries_exists= \
-                pes.EquitySeriesDict.check_equityseries_exists(commodity, interval, folder_name, changable_var_dict_for_folder)
-            # save
-            if not check_equityseries_exists:
-                temp_dict['num']=equityseries_dict.get_next_num()
-                equityseries_dict.equityseries_info['total_equityseries_num']=temp_dict['num']
-                temp_dict['commodity']=commodity
-                temp_dict['interval']='1d'
-                temp_dict['folder_name']=folder_name
-                # turn to df
-                temp_dict['data']=net_values_df[[item]]
-                temp_dict['source']='pgl'
-                temp_dict['changable_var_dict_for_folder']=changable_var_dict_for_folder
-                temp_dict['note']=''
-            else:
-                print(f'{commodity}, {interval}, {folder_name} existed in equityseries dict')
-                common_equityseries_for_test.append(f'{commodity}, {interval}, {folder_name}')
-                
-        except Exception as e:
-            error_name.append(item)
-            raise ValueError(f'{e}')
-            
-        
-    # update equityseries_info_dict[]
-    # info
-    append_dict=copy.deepcopy(temp_dict)
-    del append_dict['data']
-    equityseries_dict.equityseries_info['info'].append(append_dict)
-    # data
-    data_info.append(copy.deepcopy(temp_dict))
-
-print(f' error_name: {len(error_name)}')
-
+    sys.exit("stop") 
 # final save
-# pes.EquitySeriesDict.save_equityseries_info(equityseries_dict.equityseries_info)
-# pes.EquitySeriesDict.save_data_info(data_info)
+# pes.EquitySeriesList.save_equityseries_info(equityseries_info,confirm_execution=True)
+# pes.EquitySeriesList.save_data_info(data_info,confirm_execution=True)
 
 
 
@@ -152,5 +128,20 @@ print(f' error_name: {len(error_name)}')
 
 
 
-
+# performance
+# performance_summary=dict()
+# for year,col_list in col_dict.items():
+#     df=pd.DataFrame()
+#     for col in col_list:
+#         equity_series=net_values_df.loc[datetime(year+1,1,1):datetime(year+1,6,1),col]
+#         initial_value = equity_series.iloc[0]
+#         final_value = equity_series.iloc[-1]
+#         annual_return = (final_value - initial_value) / initial_value
+#         df[col] = [annual_return]
+#     performance_summary[year] = df
+    
+# filepath=f'C:\\Users\\user\\miniconda3\\envs\\Finance_Backtest\\finance_backtest\\backtest_result\\pgl_index\\0718\\performance_{year}.xlsx'
+# with pd.ExcelWriter(filepath) as writer:
+#     for year, df in performance_summary.items():
+#         df.to_excel(writer, sheet_name=str(year), index=False)
 

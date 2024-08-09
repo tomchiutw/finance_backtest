@@ -13,21 +13,27 @@ import get_base_dir as gbd
 import pickle
 import json
 import datetime
+import uuid
 
 class MyEncoder(json.JSONEncoder):
     def default(self, obj):
         """
-        只要检查到了是 bytes 类型的数据就把它转为 str 类型
+        Convert specific data types to JSON-serializable types.
         """
         if isinstance(obj, bytes):
+            # Convert bytes to string
             return str(obj, encoding='utf-8')
         if isinstance(obj, pd.Series):
-            return obj.tolist()
+            # Convert Series to a dictionary to retain both data and index
+            return {'data': obj.tolist(), 'index': obj.index.tolist()}
         if isinstance(obj, pd.DataFrame):
+            # Convert DataFrame to a dictionary with 'split' orientation to retain columns and index
             return obj.to_dict(orient='split')
         if isinstance(obj, (datetime.datetime, datetime.date)):
+            # Convert datetime or date to a formatted string
             return obj.strftime('%Y-%m-%d %H:%M:%S') if isinstance(obj, datetime.datetime) else obj.strftime('%Y-%m-%d')
         
+        # Default method for other types
         return json.JSONEncoder.default(self, obj)
 
 def append_path_include_module():
@@ -66,7 +72,7 @@ def get_script_dir():
 
 
 def save_df_to_excel(df,file_path,file_name):
-    '''
+    """
     save dataframe to path comimg from get_file_path_for_saving()
 
     Parameters:
@@ -82,9 +88,9 @@ def save_df_to_excel(df,file_path,file_name):
             sub_dir_name_list=['sp500',a1]
             file_name='sp500'
             file_typr='xlsx'
-            save df to  c:\finance_backtest\generallib\data\a1\sp500.xlsx
+          
 
-    '''
+    """
     os.makedirs(file_path,exist_ok=True)
 
     df.to_excel(os.path.join(file_path,file_name),engine='openpyxl')
@@ -219,25 +225,40 @@ def save_to_json(data, filename):
         with open(filename, 'w', encoding='utf-8') as json_file:
             json.dump(data, json_file, ensure_ascii=False, indent=4,cls=MyEncoder)
     except Exception as e:
-        print(f"儲存資料時發生錯誤: {e}")
+        print(f"error when save data  to json: {e}")
         
 def load_from_json(filename):
     """
-
+    Load data from a JSON file.
+    If the JSON file contains a dictionary with the format including 'columns', 'data', and 'index',
+    it will automatically convert it to a DataFrame.
+    If the JSON file contains a dictionary with 'index' and 'data' but no 'columns',
+    it will automatically convert it to a Series.
     """
     try:
         with open(filename, 'r', encoding='utf-8') as json_file:
             data = json.load(json_file)
+        
+        # If data is a dictionary with 'columns', 'data', and 'index', convert to DataFrame
+        if isinstance(data, dict):
+            if 'columns' in data and 'data' in data and 'index' in data:
+                data = json_dict_to_dataframe(data)
+            # If data is a dictionary with 'index' and 'data', convert to Series
+            elif 'data' in data and 'index' in data and 'columns' not in data:
+                data = json_dict_to_series(data)
+        
         return data
+    
     except Exception as e:
-        print(f"讀取資料時發生錯誤: {e}")
-        return None
+        raise ValueError(f"Error occurred while reading the data: {e}")
+        
     
 def json_dict_to_dataframe(data_dict):
     """
-
+    Convert a specific format dictionary to a DataFrame.
+    The dictionary needs to contain 'columns', 'data', and 'index' keys.
     """
-    if not isinstance(data_dict,dict):
+    if not isinstance(data_dict, dict):
         raise ValueError("Input data is not a dictionary")
                 
     columns = data_dict.get('columns', [])
@@ -247,3 +268,22 @@ def json_dict_to_dataframe(data_dict):
     df = pd.DataFrame(data, columns=columns, index=index)
 
     return df
+
+def json_dict_to_series(data_dict):
+    """
+    Convert a specific format dictionary to a Series.
+    The dictionary needs to contain 'index' and 'data' keys.
+    """
+    if not isinstance(data_dict, dict):
+        raise ValueError("Input data is not a dictionary")
+    
+    data = data_dict.get('data', [])
+    index = data_dict.get('index', [])
+
+    series = pd.Series(data, index=index)
+
+    return series
+
+
+def generate_random_hash():
+    return uuid.uuid4().hex

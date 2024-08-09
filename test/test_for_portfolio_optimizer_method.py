@@ -25,22 +25,21 @@ import get_base_dir as gbd
 script_dir=gbd.get_base_dir()
 
 
+equityseries_info=pes.EquitySeriesList.get_equityseries_info()
+hash_value_list=[info['hash_value'] for info in equityseries_info[:4]]
+# hash_value_list=[]
+observed_data_info=pes.EquitySeriesList.get_data_info(hash_value_to_load=hash_value_list)
+
+
 # portfolio_optimizer_interval
 portfolio_optimizer_interval='1d'
 
-# net values
-xls=f'C:\\Users\\user\\miniconda3\\envs\\Finance_Backtest\\finance_backtest\\test\\test_for_optimizer_method.csv'
-net_values_df=pd.read_csv(xls,index_col=0)
-net_values_df.index = pd.to_datetime(net_values_df.index)
-
-
-backtest_start_date=datetime(2000,1,3,0,0)
-backtest_end_date=datetime(2000,1,20,0,0)
+backtest_start_date=datetime(2021,1,3,0,0)
+backtest_end_date=datetime(2021,3,20,0,0)
 changable_var_dict=dict()
 changable_var_dict['n']=2
 
-portfolio_optimizer=popo.PortfolioOptimizer(method='HIGH_MDD',interval=portfolio_optimizer_interval,previous_steps=10,rebalance_steps=30,changable_var_dict=changable_var_dict) 
-portfolio_optimizer.observed_df=net_values_df[backtest_start_date:backtest_end_date]
+portfolio_optimizer=popo.PortfolioOptimizer(method='TOP_N_EQUALLY_DIVIDE',interval=portfolio_optimizer_interval,observed_data_info=observed_data_info,previous_steps=10,rebalance_steps=30,changable_var_dict=changable_var_dict) 
 # results
 portfolio_optimizer_results=portfolio_optimizer.portfolio_backtest(backtest_start_date, backtest_end_date,start_balance=100000,show_method=True,show_equityseries=False,show_details=True)
 

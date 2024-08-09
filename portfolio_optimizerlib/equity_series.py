@@ -7,16 +7,18 @@ from tkinter import messagebox
 import generallib.general as gg
 import get_base_dir as gbd
 import ijson
+from generallib.confirmable import confirmable
 
 class EquitySeries:
-    def __init__(self,num,commodity,interval,folder_name,data,source,changable_var_dict_for_folder=dict(),note=''):
+    def __init__(self,hash_value,commodity,interval,folder_name,data,source,changable_var_dict_for_folder=dict(),note=''):
         '''
         Parameters:
             strategy_name(str)
-            data(dataframe)
-        
+            data(series)
+            
+            self.interval means interval of this equityseries.data, not folder interval
         '''
-        self.num=num
+        self.hash_value=hash
         self.commodity=commodity
         self.interval=interval
         self.folder_name=folder_name
@@ -25,51 +27,87 @@ class EquitySeries:
         self.source=source
         self.note=note
         
-
+        
+    @classmethod
+    def resample_series(cls, series, portfolio_optimizer_interval):
+        """
+        Used when creating portfolio_optimizer.
+        Resample the given time series to the specified interval and fill missing values.
+        """
+        # Drop NaN values
+        series.dropna(inplace=True)
     
-        
-    def resample_series(self,portfolio_backtest_start_date,portfolio_backtest_end_date,portfolio_optimizer_interval):
-        self.data.dropna(inplace=True)
-        self.data=self.data.resample(gg.change_interval_for_date_range(portfolio_optimizer_interval)).asfreq()
-        self.data = self.data.ffill()
-        
-        return self.data
+        # Ensure the series is not empty after dropping NaN
+        if series.empty:
+            raise ValueError("The series is empty after dropping NaN values.")
+    
+        # Resample the series to the desired frequency
+        try:
+            resample_frequency = gg.change_interval_for_date_range(portfolio_optimizer_interval)
+            series = series.resample(resample_frequency).asfreq()
+        except Exception as e:
+            raise ValueError(f"Error during resampling: {e}")
+    
+        # Forward fill missing values
+        series = series.ffill()
+    
+        return series
 
     @classmethod
     def create_EquitySeries(cls,config):
         return EquitySeries(**config)
 
-class EquitySeriesDict:
+class EquitySeriesList:
     '''
     if edit json, must create New EquitySeriesDict first.
     else you can just get_equityseries_info(), get_data_info()
     all var in str type
+    
+    equityseries_info and data_info are all in list type
     '''
     def __init__(self):
         self.equityseries_info=self.__class__.get_equityseries_info()
-        self.total_equityseries_num=self.equityseries_info['total_equityseries_num']
-    
-    def get_next_num(self):
-        self.total_equityseries_num+=1
-        return self.total_equityseries_num
 
     
     
-    
     @classmethod
-    def get_equityseries_info(cls):
+    def get_equityseries_info(cls,hash_value_to_load=[]):
         
         script_dir = gbd.get_base_dir()
         # Create the full directory path by joining all elements in the dir_list
         full_dir_path = os.path.join(script_dir, 'backtest_result', 'saved_equityseries')
         try:
             full_file_path=full_dir_path+'\\equityseries_info.json'
-            return gg.load_from_json(full_file_path)
+            equityseries_info=[]
+            # Using ijson to parse large JSON file
+            with open(full_file_path, 'r') as file:
+                objects = ijson.items(file,'item')
+                if not hash_value_to_load:
+                    for obj in objects:
+                        try:
+                            equityseries_info.append(obj)
+                        except Exception as e:
+                            raise ValueError(f'cant get equityseries_info: {e}')
+                else: 
+                    for hash_value in hash_value_to_load:
+                        for obj in objects:
+                            
+                            if obj['hash_value']==hash_value:
+                                try:
+                                    equityseries_info.append(obj)
+                                    break
+                                except Exception as e:
+                                    raise ValueError(f'cant get {hash_value} in equityseries: {e}')  
+                        else:
+                            # not found hash_value
+                            raise ValueError(f'cant find {hash_value} in equityseries') 
+                                
+            return equityseries_info
         except Exception as e:
             raise ValueError(f'error when loading equityseries_info.json: {e}')
     
     @classmethod
-    def get_data_info(cls,nums_to_load=[]):
+    def get_data_info(cls, hash_value_to_load=[]):
         script_dir = gbd.get_base_dir()
         # Create the full directory path by joining all elements in the dir_list
         full_dir_path = os.path.join(script_dir, 'backtest_result', 'saved_equityseries')
@@ -79,39 +117,47 @@ class EquitySeriesDict:
             data_info = []
             # Using ijson to parse large JSON file
             with open(full_file_path, 'r') as file:
-
-                objects = ijson.items(file,'item')
+                objects = ijson.items(file, 'item')
                 
-                for obj in objects:
-                    if not nums_to_load or obj['num'] in nums_to_load:
-                        obj['data'] = gg.json_dict_to_dataframe(obj['data'])
-                        data_info.append(obj)
-                    
+                if not hash_value_to_load:
+                    for obj in objects:
+                        try:
+                            obj['data'] = gg.json_dict_to_series(obj['data'])
+                            # Convert index to datetime
+                            obj['data'].index = pd.to_datetime(obj['data'].index)
+                            data_info.append(obj)
+                        except Exception as e:
+                            raise ValueError(f"Can't get data_info: {e}")
+                else:
+                    # Load specific hash values
+                    for hash_value in hash_value_to_load:
+                        found = False
+                        for obj in objects:
+                            if obj['hash_value'] == hash_value:
+                                try:
+                                    obj['data'] = gg.json_dict_to_series(obj['data'])
+                                    # Convert index to datetime
+                                    obj['data'].index = pd.to_datetime(obj['data'].index)
+                                    data_info.append(obj)
+                                    found = True
+                                    break
+                                except Exception as e:
+                                    raise ValueError(f"Can't get {hash_value} in data_info: {e}")
+                        if not found:
+                            # Raise an error if the hash_value is not found
+                            raise ValueError(f"Can't find {hash_value} in data_info")
+            
             return data_info
         except Exception as e:
-            raise ValueError(f'error when loading data_info.json: {e}')
-    
-    # @classmethod
-    # def get_data_info(cls):
-        
-    #     script_dir = gbd.get_base_dir()
-    #     # Create the full directory path by joining all elements in the dir_list
-    #     full_dir_path = os.path.join(script_dir, 'backtest_result', 'saved_equityseries')
-    #     try:
-    #         full_file_path=full_dir_path+'\\data_info.json'
-    #         # trasnfer data dict to df
-    #         data_info=gg.load_from_json(full_file_path)
-    #         for item in data_info:
-    #             data_df=gg.json_dict_to_dataframe(item['data'])
-    #             del item['data']
-    #             item['data']=data_df
-    #         return data_info
-    #     except Exception as e:
-    #         raise ValueError(f'error when loading data_info.json: {e}')   
-            
+            raise ValueError(f"Error when loading data_info.json: {e}")
+
+
+    @confirmable
     @classmethod
     def save_equityseries_info(cls,data):
-        
+        """
+        use **kwargs=confirm_execution=True to cinfirm before do
+        """            
         script_dir = gbd.get_base_dir()
         # Create the full directory path by joining all elements in the dir_list
         full_dir_path = os.path.join(script_dir, 'backtest_result', 'saved_equityseries')
@@ -120,10 +166,13 @@ class EquitySeriesDict:
             return gg.save_to_json(data, full_file_path)
         except Exception as e:
             raise ValueError(f'error when saving equityseries_info.json: {e}')
-            
+    
+    @confirmable
     @classmethod
     def save_data_info(cls,data):
-        
+        """
+        use **kwargs=confirm_execution=True to cinfirm before do
+        """        
         script_dir = gbd.get_base_dir()
         # Create the full directory path by joining all elements in the dir_list
         full_dir_path = os.path.join(script_dir, 'backtest_result', 'saved_equityseries')
@@ -134,28 +183,22 @@ class EquitySeriesDict:
             raise ValueError(f'error when saving data_info.json: {e}')
     
     @classmethod
+    @confirmable
     def create_default_equityseries_info(cls):
+        """
+        use **kwargs=confirm_execution=True to cinfirm before do
+        """
+        default_list=[]
         
-        # Show a confirmation dialog to ask the user whether to continue
-        root = tk.Tk()
-        root.withdraw()  # Hide the main window
-        result = messagebox.askyesno("Confirmation", "Are you sure you want to create the default equityseries_info.json file?")
+        script_dir = gbd.get_base_dir()
+        # Create the full directory path by joining all elements in the dir_list
+        full_dir_path = os.path.join(script_dir, 'backtest_result', 'saved_equityseries')
+        try:
+            full_file_path=full_dir_path+'\\equityseries_info.json'
+            return gg.save_to_json(default_list , full_file_path)
+        except Exception as e:
+            raise ValueError(f'error when saving default equityseries_info.json: {e}')
 
-        if result:
-            default_dict=dict()
-            default_dict['total_equityseries_num']=0
-            default_dict['info']=[]
-            
-            script_dir = gbd.get_base_dir()
-            # Create the full directory path by joining all elements in the dir_list
-            full_dir_path = os.path.join(script_dir, 'backtest_result', 'saved_equityseries')
-            try:
-                full_file_path=full_dir_path+'\\equityseries_info.json'
-                return gg.save_to_json(default_dict , full_file_path)
-            except Exception as e:
-                raise ValueError(f'error when saving default equityseries_info.json: {e}')
-        else:
-            sys.exit("Operation cancelled")
             
     @classmethod
     def check_equityseries_exists(cls, commodity, interval, folder_name, changable_var_dict_for_folder):
@@ -163,7 +206,7 @@ class EquitySeriesDict:
         not ok if commodity, interval, folder_name and changable_var_dict_for_folder same
         """
         equityseries_info = cls.get_equityseries_info()
-        for value in equityseries_info['info']:
+        for value in equityseries_info:
             if (value['commodity'] == commodity and
                 value['interval'] == interval and
                 value['folder_name'] == folder_name and
@@ -172,41 +215,45 @@ class EquitySeriesDict:
         return False
     
     @classmethod
-    def get_equityseries_num(cls, commodity, interval, folder_name, changable_var_dict_for_folder):
+    def get_equityseries_hash_value(cls, commodity, interval, folder_name, changable_var_dict_for_folder):
         """
-        Return the num of the equityseries if the commodity, interval, folder_name and changable_var_dict_for_folder match.
+        Return the hash_value of the equityseries if the commodity, interval, folder_name and changable_var_dict_for_folder match.
         """
         equityseries_info = cls.get_equityseries_info()
-        for value in equityseries_info['info']:
+        for value in equityseries_info:
             if (value['commodity'] == commodity and
                 value['interval'] == interval and
                 value['folder_name'] == folder_name and
                 value['changable_var_dict_for_folder'] == changable_var_dict_for_folder):
-                return value['num']
+                return value['hash_value']
         return None
         
     @classmethod
-    def create_new_equityseries(cls, num, commodity, interval, folder_name, data, source, changable_var_dict_for_folder=dict(), note=''):
+    def create_new_equityseries_params(cls, commodity, interval, folder_name, data, source, changable_var_dict_for_folder=dict(), note=''):
         """
 
         """
         if cls.check_equityseries_exists(commodity, interval, folder_name, changable_var_dict_for_folder):
             raise ValueError("This EquitySeries has already been created")
         
-        # Update equityseries_info
-        equityseries_info = cls.get_equityseries_info()
-        next_num = cls().get_next_num()
-        equityseries_info['info'][next_num] = {
+
+        params={
+            'hash_value': gg.generate_random_hash() ,
             'commodity': commodity,
             'interval': interval,
             'folder_name': folder_name,
+            'data':data,
             'changable_var_dict_for_folder': changable_var_dict_for_folder,
             'source': source,
             'note': note
         }
+   
+        return params         
 
-        
-        return EquitySeries(num, commodity, interval, folder_name, data, source, changable_var_dict_for_folder, note)           
+
+    # !!!
+    # append EquitySeries to equity_info
+
 # -------------------------
 
         
