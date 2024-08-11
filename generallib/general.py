@@ -14,27 +14,43 @@ import pickle
 import json
 import datetime
 import uuid
+from datetime import timedelta
 
 class MyEncoder(json.JSONEncoder):
     def default(self, obj):
         """
-        Convert specific data types to JSON-serializable types.
+        Convert specific data types to JSON-serializable types,
+        and format Series and DataFrame objects appropriately.
         """
+        if isinstance(obj, pd.Series):
+            # Convert Series to a dictionary, controlling precision while keeping data as numbers
+            return {
+                'data': [round(v, 4) for v in obj.tolist()],  # Round to control precision
+                'index': obj.index.tolist()
+            }
+        if isinstance(obj, pd.DataFrame):
+            # Convert DataFrame to a dictionary, controlling precision while keeping data as numbers
+            return {
+                'columns': obj.columns.tolist(),
+                'index': obj.index.tolist(),
+                'data': [
+                    [round(v, 4) for v in row] 
+                    for row in obj.values.tolist()
+                ]
+            }
         if isinstance(obj, bytes):
             # Convert bytes to string
             return str(obj, encoding='utf-8')
-        if isinstance(obj, pd.Series):
-            # Convert Series to a dictionary to retain both data and index
-            return {'data': obj.tolist(), 'index': obj.index.tolist()}
-        if isinstance(obj, pd.DataFrame):
-            # Convert DataFrame to a dictionary with 'split' orientation to retain columns and index
-            return obj.to_dict(orient='split')
         if isinstance(obj, (datetime.datetime, datetime.date)):
             # Convert datetime or date to a formatted string
             return obj.strftime('%Y-%m-%d %H:%M:%S') if isinstance(obj, datetime.datetime) else obj.strftime('%Y-%m-%d')
         
         # Default method for other types
         return json.JSONEncoder.default(self, obj)
+
+
+
+
 
 def append_path_include_module():
     '''
@@ -213,9 +229,9 @@ def cor(df):
              
     return corr_matrix
 
-def save_to_json(data, filename):
+def save_to_json_overwrite(data, filename):
     """
-
+    this function will overwrite json file
     """
 
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -226,7 +242,10 @@ def save_to_json(data, filename):
             json.dump(data, json_file, ensure_ascii=False, indent=4,cls=MyEncoder)
     except Exception as e:
         print(f"error when save data  to json: {e}")
-        
+
+
+
+
 def load_from_json(filename):
     """
     Load data from a JSON file.
@@ -285,5 +304,35 @@ def json_dict_to_series(data_dict):
     return series
 
 
-def generate_random_hash():
-    return uuid.uuid4().hex
+
+
+
+
+def check_date_range(start_date, end_date, data, n_days=5):
+    """
+    Check if the start_date and end_date are within the range of the index in the data.
+    If either date is out of range by more than n_days, raise a ValueError.
+
+    Parameters:
+    - start_date (datetime): The start date to check.
+    - end_date (datetime): The end date to check.
+    - data (pd.Series or pd.DataFrame): The data containing the dates to compare against.
+    - n_days (int): The number of days within which the dates should fall.
+    """
+    # Check if the data is a Series or DataFrame
+    if isinstance(data, pd.Series):
+        min_date, max_date = data.index.min(), data.index.max()
+    elif isinstance(data, pd.DataFrame):
+        min_date, max_date = data.index.min(), data.index.max()
+    else:
+        raise TypeError("Data must be a pandas Series or DataFrame.")
+
+    # Check start date
+    if start_date and start_date < min_date - timedelta(days=n_days):
+        raise ValueError(f"Start date {start_date} is out of range. It should be within {n_days} days of {min_date}.")
+
+    # Check end date
+    if end_date and end_date > max_date + timedelta(days=n_days):
+        raise ValueError(f"End date {end_date} is out of range. It should be within {n_days} days of {max_date}.")
+        
+    return True

@@ -25,17 +25,19 @@ import get_base_dir as gbd
 script_dir=gbd.get_base_dir()
 
 
+backtest_start_date=datetime(2023,1,3,0,0)
+backtest_end_date=datetime(2024,1,1,0,0)
+
 equityseries_info=pes.EquitySeriesList.get_equityseries_info()
-hash_value_list=[info['hash_value'] for info in equityseries_info[:4]]
+hash_value_list=[info['hash_value'] for info in equityseries_info[:5]]
 # hash_value_list=[]
-observed_data_info=pes.EquitySeriesList.get_data_info(hash_value_to_load=hash_value_list)
+observed_data_info=pes.EquitySeriesList.get_data_info(hash_value_to_load=hash_value_list,backtest_start_date=backtest_start_date, backtest_end_date=backtest_end_date)
 
-
+# breakpoint()
 # portfolio_optimizer_interval
 portfolio_optimizer_interval='1d'
 
-backtest_start_date=datetime(2021,1,3,0,0)
-backtest_end_date=datetime(2021,3,20,0,0)
+
 changable_var_dict=dict()
 changable_var_dict['n']=2
 

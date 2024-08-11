@@ -30,14 +30,20 @@ script_dir=gbd.get_base_dir()
 # save_default equityseries_info and test
 # pes.EquitySeriesList.create_default_equityseries_info(confirm_execution=True)
 # test1=pes.EquitySeriesList.get_equityseries_info()
-# test2=pes.EquitySeriesList.get_data_info(hash_value_to_load=[i for i in range(5)])
+# hash_value_list=[info['hash_value'] for info in test1[:4]]
+# hash_value_list=[]
+# hash_value_list=['c9eea549f88b4402b5e0f39cd17acfc3']
+# test2=pes.EquitySeriesList.get_data_info(hash_value_to_load=hash_value_list)
 
-
-breakpoint()
+# new_params=pes.EquitySeriesList.create_new_equityseries_params(commodity='test', interval='test', folder_name='test', data=[], source='test', changable_var_dict_for_folder=dict(), note='')
+# pes.EquitySeriesList.save_equityseries_info(new_params, mode='a+'))
+# test1=pes.EquitySeriesList.get_equityseries_info()
+# breakpoint()
 
 # net values
 net_values_df=pd.DataFrame()
 csv_list=[2020,2021,2022,2023]
+# csv_list=[2020]
 col_dict=dict()
 # start process
 data_info=[]
@@ -82,17 +88,14 @@ for year in csv_list:
                     source='pgl'
                     
                     equityseries_info_params=pes.EquitySeriesList.create_new_equityseries_params(commodity, interval, folder_name, data, source,changable_var_dict_for_folder, note='')
-                else:
-                    print(f'{commodity}, {interval}, {folder_name} existed in equityseries dict')
+                    pes.EquitySeriesList.save_data_info(equityseries_info_params)
                     
             except Exception as e:
                 error_name.append(item)
                 raise ValueError(f'{e}')
                 
-            
+            # BUG
             # update equityseries_info
-            # data
-            data_info.append(copy.deepcopy(equityseries_info_params))
             # info
             append_dict=copy.deepcopy(equityseries_info_params)
             del append_dict['data']
@@ -103,12 +106,12 @@ for year in csv_list:
 print(f' error_name: {len(error_name)}')
 
 # check
-check=False
+check=True
 if check==False:
     sys.exit("stop") 
 # final save
-# pes.EquitySeriesList.save_equityseries_info(equityseries_info,confirm_execution=True)
-# pes.EquitySeriesList.save_data_info(data_info,confirm_execution=True)
+pes.EquitySeriesList.save_equityseries_info(equityseries_info, mode='w',confirm_execution=True)
+
 
 
 

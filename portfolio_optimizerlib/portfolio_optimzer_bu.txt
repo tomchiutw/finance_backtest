@@ -10,6 +10,7 @@ portfolio_optimizer
 import pandas as pd
 import numpy as np
 import math
+import copy
 import riskfolio as rp
 import generallib.general as gg
 import generallib.plot as gp
@@ -30,7 +31,7 @@ class PortfolioOptimizer:
         self.interval=interval
         self.equityseries_list=[]
         self.observed_df=pd.DataFrame()
-        self.observed_data_info=observed_data_info
+        self.observed_data_info=copy.deepcopy(observed_data_info) # to avoid memory overlay
         self._init_equityseries_list_and_observed_df()
         self.previous_steps=previous_steps
         self.rebalance_steps=rebalance_steps
@@ -43,18 +44,27 @@ class PortfolioOptimizer:
         if not hasattr(self,self.method):
             raise ValueError(f"no method called {self.method} in class PortfolioOptimizer")    
     def _init_equityseries_list_and_observed_df(self):
+        # BUG need test
+        """
+        for backtesting different interval, we need to use pes.resample_series() to process data['data'] for data in observed_data_info first.
+        Therefore, observed_data_info might change.
+        After that, we add data['data'] for data in observed_data_info to observed_df, and create EquitySeries
+        """
         observed_df=pd.DataFrame()
         for data in self.observed_data_info:
-            self.append_observed_df(data['data'], data[''])
-            observed_df[data['hash_value']]=data['data']
+            # proccess data
+            series=data['data']
+            series=pes.EquitySeries.resample_series(series,self.interval)
+            
+            # observed_df
+            observed_df[data['hash_value']]=series
+            # equityseries_list
+            # HINT data['data'] has already updated because we use series=data['data'] and resample_series
             self.equityseries_list.append(pes.EquitySeries(**data))
+            
+        observed_df.dropna(inplace=True)
         self.observed_df=observed_df
-    def append_observed_df(self, new_data, col_name):
-        """
-        new_data (Series): get from equityseries.data
-        """
-        self.observed_df[col_name] = new_data
-        self.observed_df.dropna(inplace=True)
+
     
     def do_method(self,idx,time_index):
         self.create_template_data(time_index)
@@ -556,7 +566,7 @@ class PortfolioOptimizer:
     
     
     
-# # =============================================================================
+# !!! =============================================================================
 
     def portfolio_backtest(self,backtest_start_date,backtest_end_date,start_balance=1000000,show_method=False,show_equityseries=False,show_details=False):
         pass
@@ -574,7 +584,6 @@ class PortfolioOptimizer:
         if len(self.observed_df)<self.previous_steps:
             raise ValueError(f"previous_steps is {self.previous_steps}, which is larger than length of observed_df {len(self.observed_df)}")
         rebalanced_df=pd.DataFrame(columns=list(self.observed_df.columns)+['Cash',self.method])  
-    
         # 3 start backtest
         for idx,time_index in enumerate(backtest_date_range):
     
@@ -623,7 +632,8 @@ class PortfolioOptimizer:
                         except:
                             raise ValueError(f'no time_index {time_index} in self.observed_df')
                         if previous_value!=0 and not pd.isna(previous_value):
-                            simple_return=(current_value-previous_value)/previous_value
+                            simple_return=float((current_value-previous_value)/previous_value)
+                        # breakpoint()
                         # update equity
                         rebalanced_df.iloc[rebalanced_df_row_loc,rebalanced_df_col_loc]= \
                         rebalanced_df.iloc[rebalanced_df_row_loc-1,rebalanced_df_col_loc]*(1+simple_return) 

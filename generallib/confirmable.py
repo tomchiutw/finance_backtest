@@ -5,8 +5,7 @@ from functools import wraps
 
 def confirmable(func):
     """
-    A decorator that adds an optional confirmation dialog before executing the function.
-    add confirm_execution as parameter in myfunction
+    can only use in normal func or statisticmethod, not for classmethod
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -23,11 +22,15 @@ def confirmable(func):
         
         # Remove 'confirm_execution' from kwargs before calling the function
         kwargs.pop('confirm_execution', None)
-        
-        # Execute the original function
+
         return func(*args, **kwargs)
+
     
     return wrapper
+
+
+
+
 
 # HINT
 # @confirmable
