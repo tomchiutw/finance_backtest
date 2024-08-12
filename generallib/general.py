@@ -143,6 +143,25 @@ def change_interval_for_date_range(interval):
     }
     return interval_mapping[interval]
 
+def get_date_offset(interval):
+    interval_mapping = {
+        "1m": pd.DateOffset(minutes=1),
+        "2m": pd.DateOffset(minutes=2),
+        "5m": pd.DateOffset(minutes=5),
+        "15m": pd.DateOffset(minutes=15),
+        "30m": pd.DateOffset(minutes=30),
+        "60m": pd.DateOffset(hours=1),
+        "90m": pd.DateOffset(minutes=90),
+        "1h": pd.DateOffset(hours=1),
+        "1d": pd.DateOffset(days=1),
+        "5d": pd.DateOffset(days=5),
+        "1wk": pd.DateOffset(weeks=1),
+        "1mo": pd.DateOffset(months=1),
+        "3mo": pd.DateOffset(months=3)
+    }
+    return interval_mapping.get(interval)
+
+
 def get_backtest_date_range(backtest_start_date,backtest_end_date,interval):
     backtest_date_range=pd.date_range(start=backtest_start_date, end=backtest_end_date, freq=change_interval_for_date_range(interval))
     if len(backtest_date_range)==0:

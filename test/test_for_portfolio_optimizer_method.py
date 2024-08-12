@@ -25,25 +25,25 @@ import get_base_dir as gbd
 script_dir=gbd.get_base_dir()
 
 
-backtest_start_date=datetime(2023,1,3,0,0)
-backtest_end_date=datetime(2024,1,1,0,0)
+
 
 equityseries_info=pes.EquitySeriesList.get_equityseries_info()
-hash_value_list=[info['hash_value'] for info in equityseries_info[:5]]
-# hash_value_list=[]
-observed_data_info=pes.EquitySeriesList.get_data_info(hash_value_to_load=hash_value_list,backtest_start_date=backtest_start_date, backtest_end_date=backtest_end_date)
+observed_equityseries_info=equityseries_info[:5]
+# observed_equityseries_info=equityseries_info[:]
 
 # breakpoint()
 # portfolio_optimizer_interval
 portfolio_optimizer_interval='1d'
 
+backtest_start_date=datetime(2023,4,7,0,0)
+backtest_end_date=datetime(2024,1,1,0,0)
 
 changable_var_dict=dict()
 changable_var_dict['n']=2
 
-portfolio_optimizer=popo.PortfolioOptimizer(method='TOP_N_EQUALLY_DIVIDE',interval=portfolio_optimizer_interval,observed_data_info=observed_data_info,previous_steps=10,rebalance_steps=30,changable_var_dict=changable_var_dict) 
+portfolio_optimizer=popo.PortfolioOptimizer(method='TOP_N_EQUALLY_DIVIDE',interval=portfolio_optimizer_interval,observed_equityseries_info=observed_equityseries_info,previous_steps=5,rebalance_steps=30,changable_var_dict=changable_var_dict) 
 # results
-portfolio_optimizer_results=portfolio_optimizer.portfolio_backtest(backtest_start_date, backtest_end_date,start_balance=100000,show_method=True,show_equityseries=False,show_details=True)
+portfolio_optimizer_results=portfolio_optimizer.portfolio_backtest(backtest_start_date, backtest_end_date,start_balance=100000,show_method=True,show_details=True)
 
 
 

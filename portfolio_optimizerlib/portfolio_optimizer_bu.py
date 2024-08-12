@@ -10,6 +10,7 @@ portfolio_optimizer
 import pandas as pd
 import numpy as np
 import math
+import copy
 import riskfolio as rp
 import generallib.general as gg
 import generallib.plot as gp
@@ -29,9 +30,7 @@ class PortfolioOptimizer:
         self._init_method()
         self.interval=interval
         self.equityseries_list=[]
-        self.observed_df=pd.DataFrame()
-        self.observed_data_info=observed_data_info
-        self._init_equityseries_list_and_observed_df()
+        self._init_equityseries_list_and_observed_df(observed_data_info)
         self.previous_steps=previous_steps
         self.rebalance_steps=rebalance_steps
         self.changable_var_dict=changable_var_dict
@@ -42,19 +41,28 @@ class PortfolioOptimizer:
     def _init_method(self):
         if not hasattr(self,self.method):
             raise ValueError(f"no method called {self.method} in class PortfolioOptimizer")    
-    def _init_equityseries_list_and_observed_df(self):
+    def _init_equityseries_list_and_observed_df(self,observed_data_info):
+        """
+        for backtesting different interval, we need to use pes.resample_series() to process data['data'] for data in observed_data_info first.
+        Therefore, observed_data_info might change.
+        After that, we add data['data'] for data in observed_data_info to observed_df, and create EquitySeries
+        """
         observed_df=pd.DataFrame()
-        for data in self.observed_data_info:
-            self.append_observed_df(data['data'], data[''])
-            observed_df[data['hash_value']]=data['data']
+        observed_data_info_for_init=copy.deepcopy(observed_data_info) # to avoid memory overlay
+        for data in observed_data_info_for_init:
+            # proccess data
+            series=data['data']
+            series=pes.EquitySeries.resample_series(series,self.interval)
+            
+            # observed_df
+            observed_df[data['hash_value']]=series
+            # equityseries_list
+            # data['data'] has already updated because we use series=data['data'] and resample_series
             self.equityseries_list.append(pes.EquitySeries(**data))
+            
+        observed_df.dropna(inplace=True)
         self.observed_df=observed_df
-    def append_observed_df(self, new_data, col_name):
-        """
-        new_data (Series): get from equityseries.data
-        """
-        self.observed_df[col_name] = new_data
-        self.observed_df.dropna(inplace=True)
+
     
     def do_method(self,idx,time_index):
         self.create_template_data(time_index)
@@ -97,7 +105,7 @@ class PortfolioOptimizer:
         self.current_weight = {col: rebalanced_df.loc[time_index, col] / rebalanced_df.loc[time_index, self.method] 
                                for col in rebalanced_df.columns if col != self.method}
         return self.current_weight
-# =============================================================================
+# !!! =============================================================================
 
     # !!! weight must include all self.template_data.columns
     # !!! beware of same variable name in changable_var_dict
@@ -110,7 +118,6 @@ class PortfolioOptimizer:
         changable_var_dict['acceptable_r']=0
 
         '''
-        performance_df=pd.DataFrame()
         try:
             n=self.changable_var_dict['n']
             acceptable_mdd=self.changable_var_dict['acceptable_mdd']
@@ -164,15 +171,15 @@ class PortfolioOptimizer:
         changable_var_dict['idx_start'] set 0 at main.py
         ex.
         # for take profit method
-        changable_var_dict['take_profit_perventage']=0.3
-        changable_var_dict['days_for_take_profit_perventage']=5
+        changable_var_dict['take_profit_percentage']=0.3
+        changable_var_dict['days_for_take_profit_percentage']=5
         changable_var_dict['idx_start']=0
         changable_var_dict['days_for_rebalance_steps']=60
         changable_var_dict['first_step_method']='TOP_N_SHARPE_RATIO_EQUALLY_DIVIDE'
         '''
         try:
-            take_profit_perventage=self.changable_var_dict['take_profit_perventage']
-            days_for_take_profit_perventage=self.changable_var_dict['days_for_take_profit_perventage']
+            take_profit_percentage=self.changable_var_dict['take_profit_percentage']
+            days_for_take_profit_percentage=self.changable_var_dict['days_for_take_profit_percentage']
             days_for_rebalance_steps=self.changable_var_dict['days_for_rebalance_steps']
             idx_start=self.changable_var_dict['idx_start']
             first_step_method=self.changable_var_dict['first_step_method']
@@ -196,24 +203,24 @@ class PortfolioOptimizer:
             return weight
         
             
-        # if r>take_profit_perventage, do everyday
+        # if r>take_profit_percentage, do everyday
         rebalance_needed = False 
         cols_to_zero = []
-        if idx_count>=days_for_take_profit_perventage:
+        if idx_count>=days_for_take_profit_percentage:
             # print(f'{idx_count} r check')
             rebalanced_df_list=[col for col in self.rebalanced_df.columns if not (self.rebalanced_df.loc[time_index,col]==0 \
                                 or col==self.method or col=='Cash')]  
             for col in rebalanced_df_list:
                 col_index = self.rebalanced_df.columns.get_loc(col)
-                initial_value = self.rebalanced_df.iloc[-days_for_take_profit_perventage-1, col_index]
+                initial_value = self.rebalanced_df.iloc[-days_for_take_profit_percentage-1, col_index]
                 # get previous value and prevent 0
-                for i in range(-days_for_take_profit_perventage-1, -1):
+                for i in range(-days_for_take_profit_percentage-1, -1):
                     previous_value = self.rebalanced_df.iloc[i, col_index]
                     if previous_value != 0:
                         break
                 r = (self.rebalanced_df.iloc[-1, col_index] - previous_value) / previous_value
                 # breakpoint()
-                if r >= take_profit_perventage:
+                if r >= take_profit_percentage:
                     cols_to_zero.append(col)
                     rebalance_needed = True
                     print(f'{idx_count},{time_index}, {col}, {r:.2f}, rebalanced')
@@ -556,7 +563,7 @@ class PortfolioOptimizer:
     
     
     
-# # =============================================================================
+# !!! =============================================================================
 
     def portfolio_backtest(self,backtest_start_date,backtest_end_date,start_balance=1000000,show_method=False,show_equityseries=False,show_details=False):
         pass
@@ -574,7 +581,6 @@ class PortfolioOptimizer:
         if len(self.observed_df)<self.previous_steps:
             raise ValueError(f"previous_steps is {self.previous_steps}, which is larger than length of observed_df {len(self.observed_df)}")
         rebalanced_df=pd.DataFrame(columns=list(self.observed_df.columns)+['Cash',self.method])  
-    
         # 3 start backtest
         for idx,time_index in enumerate(backtest_date_range):
     
@@ -623,7 +629,8 @@ class PortfolioOptimizer:
                         except:
                             raise ValueError(f'no time_index {time_index} in self.observed_df')
                         if previous_value!=0 and not pd.isna(previous_value):
-                            simple_return=(current_value-previous_value)/previous_value
+                            simple_return=float((current_value-previous_value)/previous_value)
+                        
                         # update equity
                         rebalanced_df.iloc[rebalanced_df_row_loc,rebalanced_df_col_loc]= \
                         rebalanced_df.iloc[rebalanced_df_row_loc-1,rebalanced_df_col_loc]*(1+simple_return) 
@@ -679,7 +686,7 @@ class PortfolioOptimizer:
         return portfolio_backtest_results
 
 # --------------------------
-def normalized_to_base(df,start_balance=100000,exception=['Cash']):
+def normalized_to_base(df,start_balance=1000000,exception=['Cash']):
     df.dropna(inplace=True)
     for col in df.columns:
         if col not in exception:

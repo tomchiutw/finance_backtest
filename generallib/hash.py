@@ -83,7 +83,7 @@ def find_file_by_hash_value(target_dir, hash_value, levels=cc.DEFAULT_DATA_INFO_
     
     search_path_parts = [hash_value[i].lower() for i in range(min(levels, len(hash_value)))]
     search_dir = os.path.join(target_dir, *search_path_parts)
-    
+
     if not os.path.exists(search_dir):
         raise ValueError(f'levels:{levels} might be larger than hash_value file level')
     

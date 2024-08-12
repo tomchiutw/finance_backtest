@@ -52,6 +52,31 @@ class EquitySeries:
         series = series.ffill()
     
         return series
+    
+    @staticmethod
+    def check_if_resampled(series, expected_interval,auto_resample_series=False):
+        """
+        Check if the given series has been resampled to the expected interval.
+    
+        Parameters:
+            series (pd.Series): The time series to check.
+            expected_interval (str): The expected resampling interval (e.g., 'D', 'W', 'M').
+    
+        Returns:
+            bool: True if the series is resampled to the expected interval, False otherwise.
+        """
+        # Generate the expected frequency using the provided interval
+        expected_frequency = pd.date_range(start=series.index.min(), end=series.index.max(), freq=expected_interval)
+    
+        # Compare the expected frequency with the actual series index
+        if series.index.equals(expected_frequency):
+            return series
+        else:
+            if auto_resample_series==True:
+                series=EquitySeries.resample_series(series=series, portfolio_optimizer_interval=expected_interval )
+                return series
+            else:
+                raise ValueError(f'series hasnt resample to {expected_interval}')
 
     @staticmethod
     def create_EquitySeries(config):
@@ -104,14 +129,14 @@ class EquitySeriesList:
             raise ValueError(f'error when loading equityseries_info.json: {e}')
     
     @staticmethod
-    def get_data_info(hash_value_to_load=[], backtest_start_date=None, backtest_end_date=None):
+    def get_data_info(hash_value_to_load=[], start_date=None, end_date=None):
         """
         Load data_info from JSON files and filter based on hash_value and date range.
     
         Parameters:
             hash_value_to_load (list): List of hash values to load. If empty, load all.
-            backtest_start_date (datetime): The start date for filtering data.
-            backtest_end_date (datetime): The end date for filtering data.
+            start_date (datetime): The start date for filtering data.
+            end_date (datetime): The end date for filtering data.
     
         Returns:
             list: A list of data_info objects with the requested hash values and date range.
@@ -131,9 +156,9 @@ class EquitySeriesList:
                             obj = json.load(f)
                             obj['data'] = gg.json_dict_to_series(obj['data'])
                             obj['data'].index = pd.to_datetime(obj['data'].index)
-                            gg.check_date_range(backtest_start_date, backtest_end_date, obj['data'])
-                            if backtest_start_date and backtest_end_date:
-                                obj['data'] = obj['data'].loc[backtest_start_date:backtest_end_date]
+                            gg.check_date_range(start_date, end_date, obj['data'])
+                            if start_date and end_date:
+                                obj['data'] = obj['data'].loc[start_date:end_date]
                             data_info.append(obj)
         else:
             # Load specific hash values
@@ -144,15 +169,40 @@ class EquitySeriesList:
                         obj = json.load(f)
                         obj['data'] = gg.json_dict_to_series(obj['data'])
                         obj['data'].index = pd.to_datetime(obj['data'].index)
-                        gg.check_date_range(backtest_start_date, backtest_end_date, obj['data'])
-                        if backtest_start_date and backtest_end_date:
-                            obj['data'] = obj['data'].loc[backtest_start_date:backtest_end_date]
+                        gg.check_date_range(start_date, end_date, obj['data'])
+                        if start_date and end_date:
+                            obj['data'] = obj['data'].loc[start_date:end_date]
                         data_info.append(obj)
                 else:
                     raise ValueError(f"Can't find {hash_value} in data_info")
     
         return data_info
-
+    
+    @staticmethod
+    def get_specific_data_info(hash_value, start_date=None, end_date=None):
+        script_dir = gbd.get_base_dir()
+        full_dir_path = os.path.join(script_dir, 'backtest_result', 'saved_equityseries', 'data_info')
+        file_path = gh.find_file_by_hash_value(full_dir_path, hash_value, levels=cc.DEFAULT_DATA_INFO_LEVELS)
+        if file_path:
+            with open(file_path, 'r') as f:
+                obj = json.load(f)
+                obj['data'] = gg.json_dict_to_series(obj['data'])
+                obj['data'].index = pd.to_datetime(obj['data'].index)
+                gg.check_date_range(start_date, end_date, obj['data'])
+                if start_date and end_date:
+                    obj['data'] = obj['data'].loc[start_date:end_date]
+                return obj
+        else:
+            raise ValueError(f"Can't find {hash_value} in data_info")            
+        
+    @staticmethod
+    def get_specific_data_in_data_info(hash_value, start_date=None, end_date=None):
+        try:
+            info=EquitySeriesList.get_specific_data_info(hash_value, start_date=start_date, end_date=end_date)
+            return info['data']
+        except Exception as e:
+            raise ValueError(f"Can't find {hash_value} data in data_info:{e}")
+            
     @confirmable
     @staticmethod
     def save_equityseries_info(data, mode='a'):
@@ -311,6 +361,7 @@ class EquitySeriesList:
         """
         Create a new set of parameters for an EquitySeries and return it as a dictionary.
         """
+        check=EquitySeries.check_if_resampled(series=data, expected_interval=interval,auto_resample_series=True )
         if EquitySeriesList.check_equityseries_exists(commodity, interval, folder_name, changable_var_dict_for_folder):
             raise ValueError("This EquitySeries has already been created")
         

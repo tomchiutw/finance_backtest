@@ -26,6 +26,15 @@ import backtestlib.indicator_list as bil
 import get_base_dir as gbd
 script_dir=gbd.get_base_dir()
 
+# test resample_series
+# test1=pes.EquitySeriesList.get_equityseries_info()
+# hash_value_list=[info['hash_value'] for info in test1[:1]]
+# hash_value_list=[]
+# hash_value_list=['8d0f44c49a2e40b7a92fc0ae65ba2cba']
+# test2=pes.EquitySeriesList.get_data_info(hash_value_to_load=hash_value_list)
+# series=test2[0]['data']
+# new_series=pes.EquitySeries.resample_series(series=series, portfolio_optimizer_interval='1h')
+# series=pes.EquitySeries.check_if_resampled(series=series, expected_interval='1d',auto_resample_series=True)
 
 # save_default equityseries_info and test
 # pes.EquitySeriesList.create_default_equityseries_info(confirm_execution=True)
@@ -35,10 +44,11 @@ script_dir=gbd.get_base_dir()
 # hash_value_list=['c9eea549f88b4402b5e0f39cd17acfc3']
 # test2=pes.EquitySeriesList.get_data_info(hash_value_to_load=hash_value_list)
 
+# test add
 # new_params=pes.EquitySeriesList.create_new_equityseries_params(commodity='test', interval='test', folder_name='test', data=[], source='test', changable_var_dict_for_folder=dict(), note='')
 # pes.EquitySeriesList.save_equityseries_info(new_params, mode='a+'))
 # test1=pes.EquitySeriesList.get_equityseries_info()
-# breakpoint()
+breakpoint()
 
 # net values
 net_values_df=pd.DataFrame()
@@ -147,4 +157,5 @@ pes.EquitySeriesList.save_equityseries_info(equityseries_info, mode='w',confirm_
 # with pd.ExcelWriter(filepath) as writer:
 #     for year, df in performance_summary.items():
 #         df.to_excel(writer, sheet_name=str(year), index=False)
+
 
