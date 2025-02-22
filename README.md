@@ -19,7 +19,7 @@ Tools for finance backtesting.  Using data from investing.com or yfinance.
 ![image](https://github.com/user-attachments/assets/bfd84485-13f3-4af6-9814-30b10a99cfea)
 
 - **Order Book Management**:  
-  Track executed and pending orders in backtesting, including order type (market, stop), direction, execution price, fees, timestamps, and status.
+  Track executed and pending orders in backtesting, including order type (limit, market,stop,market on opening order,market on closing order), direction, execution price, fees, timestamps, and status.
 ![image](https://github.com/user-attachments/assets/1a5caca0-aa89-4377-ac6c-ce329b067a33)
 
 - **Performance Evaluation Metrics**:  
@@ -27,7 +27,7 @@ Tools for finance backtesting.  Using data from investing.com or yfinance.
 ![image](https://github.com/user-attachments/assets/f09ca8a5-a624-446a-a37c-f97d706d21b9)
 
 ## Optimizer
-To use optimizer of parameters, in this example, we test for two parameters (short_entry_percentage, short_close_percentage) combination with higher return.
+To use optimizer of parameters, in this example, we test for two parameters (short_entry_percentage, short_close_percentage) combination with highest return.
 
 ```bash
 import backtestlib.optimizer as bop
