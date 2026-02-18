@@ -36,10 +36,10 @@ backtest_results=dict()
 optimize_results=dict()
 # ---------------------------
 # entry_percentage
-sid=0.05
+sid=0.03
 short_entry_percentage=sid
 short_close_percentage=sid
-short_close_percentage_2=0.03
+short_close_percentage_2=sid
 spread=0
 lid=0.15
 long_entry_percentage=lid
@@ -47,7 +47,7 @@ long_close_percentage=lid
 long_stop_percentage=lid
 settlement=1
 # leverage
-leverage=0.2
+leverage=0.3
 # liability
 liability_percentage=0
 # create main account
@@ -56,9 +56,9 @@ accounts=ba.AccountManager()
 is_optimizer=False
 # backtest_period
 start_year=2006
-end_year=2024
+end_year=2026
 # backtest_loop
-n_steps=18
+n_steps=4
 
 for year in range(start_year,end_year,n_steps):
     
@@ -128,7 +128,7 @@ for year in range(start_year,end_year,n_steps):
         
     # folder_setting end
     # ----------------------------
-    backtest_results[year]= f.folder_main(changable_var_dict,show_balance=True,show_details=False,show_pnl=False)
+    backtest_results[year]= f.folder_main(changable_var_dict,show_balance=False,show_details=False,show_pnl=False)
     
     
     

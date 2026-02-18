@@ -197,17 +197,17 @@ class F0001(ff.Folder):
                 for num in stop_order_nums:
                     account.orderbook.del_order(num,show_del_order=False)
             # short_entry order
-            # if entry_condition1 and entry_condition2 and entry_condition3 and entry_condition4 and entry_condition5  \
-            #     :
-            #     open_quantity=math.floor(leverage*(account.balance+liability)/(commodity_future.contract_size*open_price+commodity_future.fee))
-            #     if open_quantity!=0:
-            #         order_1=account.orderbook.add_order('short',commodity_future,marketdata_future.contract,'market','short',self,time_index,quantity=open_quantity,price=0,remark='short_entry')
-            
-            # long_entry order
-            if entry_condition3 and entry_condition4 and entry_condition6:
+            if entry_condition1 and entry_condition2 and entry_condition3 and entry_condition4 and entry_condition5  \
+                :
                 open_quantity=math.floor(leverage*(account.balance+liability)/(commodity_future.contract_size*open_price+commodity_future.fee))
                 if open_quantity!=0:
-                    order_1=account.orderbook.add_order('long',commodity_future,marketdata_future.contract,'market','long',self,time_index,quantity=open_quantity,price=0,remark='long_entry')
+                    order_1=account.orderbook.add_order('short',commodity_future,marketdata_future.contract,'market','short',self,time_index,quantity=open_quantity,price=0,remark='short_entry')
+            
+            # long_entry order
+            # if entry_condition3 and entry_condition4 and entry_condition6:
+            #     open_quantity=math.floor(leverage*(account.balance+liability)/(commodity_future.contract_size*open_price+commodity_future.fee))
+            #     if open_quantity!=0:
+            #         order_1=account.orderbook.add_order('long',commodity_future,marketdata_future.contract,'market','long',self,time_index,quantity=open_quantity,price=0,remark='long_entry')
             # ---------------------------------------------
             bb.single_interval_backtest_used_in_folder(time_index,account,tradingpanel,interval)
             # ---------------------------------------------------
@@ -224,26 +224,64 @@ class F0001(ff.Folder):
             # short_close_order
             if close_condition1:
                 if not close_condition2:
-                    close_quantity=abs(net_position)
-                    order_2=account.orderbook.add_order('buytocover',commodity_future,marketdata_future.contract,'stop','long',self,time_index,quantity=close_quantity,price=last_future_close*(1+short_close_percentage),remark='short_close_stop')
+                    close_quantity = abs(net_position)
+                    stop_price = last_future_close * (1 + short_close_percentage)
+                    remark = f'short_close_stop|date:{time_index.strftime("%Y-%m-%d")}|entry:{last_future_close:.2f}|pct:{short_close_percentage:.4f}|stop:{stop_price:.2f}'
+                    order_2 = account.orderbook.add_order(
+                        'buytocover',
+                        commodity_future,
+                        marketdata_future.contract,
+                        'stop',
+                        'long',
+                        self,
+                        time_index,
+                        quantity=close_quantity,
+                        price=stop_price,
+                        remark=remark
+                    )
                 elif close_condition2:
-                    now_high_price=marketdata_future.data[interval].loc[time_index,'High']
+                    now_high_price = marketdata_future.data[interval].loc[time_index,'High']
+                    stop_price = last_future_close * (1 + short_close_percentage)
                     # sth unreasonable that we use todays future high, but needs to use here due to programme limitaion.
-                    if now_high_price>=last_future_close*(1+short_close_percentage):
-                        close_quantity=abs(net_position)
-                        order_2=account.orderbook.add_order('buytocover',commodity_future,marketdata_future.contract,'stop','long',self,time_index,quantity=close_quantity,price=last_future_close*(1+short_close_percentage),remark='short_close_stop') 
+                    if now_high_price >= stop_price:
+                        close_quantity = abs(net_position)
+                        remark = f'short_close_stop|date:{time_index.strftime("%Y-%m-%d")}|entry:{last_future_close:.2f}|pct:{short_close_percentage:.4f}|stop:{stop_price:.2f}|settlement'
+                        order_2 = account.orderbook.add_order(
+                            'buytocover',
+                            commodity_future,
+                            marketdata_future.contract,
+                            'stop',
+                            'long',
+                            self,
+                            time_index,
+                            quantity=close_quantity,
+                            price=stop_price,
+                            remark=remark
+                        ) 
                     else:
-                        close_quantity=abs(net_position)
-                        order_2=account.orderbook.add_order('buytocover',commodity_future,marketdata_future.contract,'market on closing order','long',self,time_index,quantity=close_quantity,price=0,remark='short_close_settle')
+                        close_quantity = abs(net_position)
+                        remark = f'short_close_settle|date:{time_index.strftime("%Y-%m-%d")}|close:{close_price:.2f}'
+                        order_2 = account.orderbook.add_order(
+                            'buytocover',
+                            commodity_future,
+                            marketdata_future.contract,
+                            'market on closing order',
+                            'long',
+                            self,
+                            time_index,
+                            quantity=close_quantity,
+                            price=0,
+                            remark=remark
+                        )
             # long_close_order
-            if close_condition3:
-                if not close_condition2:
-                    if close_condition4 :
-                        close_quantity=abs(net_position)
-                        order_2=account.orderbook.add_order('sell',commodity_future,marketdata_future.contract,'market on closing order','short',self,time_index,quantity=close_quantity,price=0,remark='long_close')
-                elif close_condition2:
-                    close_quantity=abs(net_position)
-                    order_2=account.orderbook.add_order('sell',commodity_future,marketdata_future.contract,'market on closing order','short',self,time_index,quantity=close_quantity,price=0,remark='long_close_settle')
+            # if close_condition3:
+            #     if not close_condition2:
+            #         if close_condition4 :
+            #             close_quantity=abs(net_position)
+            #             order_2=account.orderbook.add_order('sell',commodity_future,marketdata_future.contract,'market on closing order','short',self,time_index,quantity=close_quantity,price=0,remark='long_close')
+            #     elif close_condition2:
+            #         close_quantity=abs(net_position)
+            #         order_2=account.orderbook.add_order('sell',commodity_future,marketdata_future.contract,'market on closing order','short',self,time_index,quantity=close_quantity,price=0,remark='long_close_settle')
 # --------------------------
 
 def folder_main(changable_var_dict,show_balance=False,show_details=False,show_pnl=False):

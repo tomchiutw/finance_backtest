@@ -50,11 +50,11 @@ class MarketData:
 
     def download_data_from_yfinance(self,interval,start_date,end_date):
         '''
-        This function is used for downloading data fromo yfinance and save to self.data[interval]
+        This function is used for downloading data from yfinance and save to self.data[interval]
     
         Parameters:
             symbol(str): code of commodities
-            interval(str): “1m”, “2m”, “5m”, “15m”, “30m”, “60m”, “90m”, “1h”, “1d”, “5d”, “1wk”, “1mo”, “3mo”
+            interval(str): "1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo"
             start_date(datetime): 
             end_date(datetime): 
         Returns:
@@ -63,13 +63,57 @@ class MarketData:
         self.check_interval(interval)
         # download data from yf to asset_data
         print(f'downloading {self.symbol}_{interval} data...')
-        asset_data = yf.download(self.symbol, start=start_date, end=end_date, interval=interval)
-        # remove timezone information
-        if asset_data.index.name=='Datetime' and asset_data.index.tz is not None:
-            asset_data.index = asset_data.index.tz_localize(None)
-
         
-        return asset_data
+        try:
+            # Method 1: Use Ticker.history() (Official recommended, more stable)
+            ticker = yf.Ticker(self.symbol)
+            asset_data = ticker.history(start=start_date, end=end_date, interval=interval)
+            
+            # Check if download succeeded
+            if asset_data.empty:
+                print(f"WARNING: Ticker.history() returned empty data, trying yf.download()...")
+                # Method 2: Use yf.download() (Fallback)
+                asset_data = yf.download(
+                    self.symbol, 
+                    start=start_date, 
+                    end=end_date, 
+                    interval=interval,
+                    progress=False
+                )
+            
+            # Check again
+            if asset_data.empty:
+                raise ValueError(f"Downloaded data for {self.symbol} is empty. Please check the symbol and date range.")
+            
+            print(f"SUCCESS: Downloaded {len(asset_data)} rows of data")
+            
+            # remove timezone information
+            if hasattr(asset_data.index, 'tz') and asset_data.index.tz is not None:
+                asset_data.index = asset_data.index.tz_localize(None)
+            
+            # Ensure index is datetime type
+            if not isinstance(asset_data.index, pd.DatetimeIndex):
+                asset_data.index = pd.to_datetime(asset_data.index)
+            
+            return asset_data
+            
+        except Exception as e:
+            error_msg = f"Failed to download {self.symbol}: {str(e)}"
+            print(f"ERROR: {error_msg}")
+            
+            # Show suggested file path
+            base_dir = gbd.get_base_dir()
+            file_path = os.path.join(base_dir, 'data', self.category, self.symbol, self.contract)
+            file_name = f"{self.symbol}_{self.contract}_{interval}.xlsx"
+            full_path = os.path.join(file_path, file_name)
+            
+            print(f"\nSuggestions:")
+            print(f"   1. Check your internet connection")
+            print(f"   2. Verify symbol '{self.symbol}' is correct")
+            print(f"   3. Try updating yfinance: pip install --upgrade yfinance")
+            print(f"   4. Or manually download data and save to: {full_path}")
+            
+            raise ValueError(error_msg) from e
     
     def get_marketdata_saved_path_in_list(self):
         '''
@@ -154,7 +198,16 @@ class MarketData:
         return df
     
     def automatic_get_data_from_yfinance(self,interval,backtest_start_date,backtest_end_date,delayed_days=5,note=''):
+        '''
+        Automatically download data from yfinance if not exists or data range is insufficient
         
+        Parameters:
+            interval(str): data interval
+            backtest_start_date(datetime): backtest start date
+            backtest_end_date(datetime): backtest end date
+            delayed_days(int): tolerance days for data range check
+            note(str): optional note for file name
+        '''
         self.check_interval(interval)
         
         base_dir=gbd.get_base_dir()
@@ -163,19 +216,23 @@ class MarketData:
         full_path=os.path.join(file_path,file_name)
         
         if not os.path.exists(full_path):
+            print(f"File not found, downloading data...")
             data_df=self.download_data_from_yfinance(interval,backtest_start_date,backtest_end_date)
             self.save_downloaded_data_from_df(data_df,interval)
             
         else:
+            # print(f"File exists, checking data range...")
             data_df=self.get_data_from_xlsx(interval)
             data_df.index = pd.to_datetime(data_df.index)
-            if pd.to_datetime(backtest_start_date)+timedelta(days=delayed_days) < data_df.index.min() or pd.to_datetime(backtest_end_date)-timedelta(days=delayed_days)> data_df.index.max() \
-                or data_df.empty:
+            
+            if pd.to_datetime(backtest_start_date)+timedelta(days=delayed_days) < data_df.index.min() or \
+               pd.to_datetime(backtest_end_date)-timedelta(days=delayed_days) > data_df.index.max() or \
+               data_df.empty:
+                print(f"WARNING: Data range insufficient, re-downloading...")
                 data_df=self.download_data_from_yfinance(interval,backtest_start_date,backtest_end_date)
                 self.save_downloaded_data_from_df(data_df,interval)
-            
+            else:
+                # print(f"Data range is sufficient")
+                pass
         
         self.get_data_from_xlsx(interval,backtest_start_date,backtest_end_date)
-
-        
-    
