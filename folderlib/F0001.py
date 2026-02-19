@@ -240,10 +240,9 @@ class F0001(ff.Folder):
                         remark=remark
                     )
                 elif close_condition2:
-                    now_high_price = marketdata_future.data[interval].loc[time_index,'High']
                     stop_price = last_future_close * (1 + short_close_percentage)
-                    # sth unreasonable that we use todays future high, but needs to use here due to programme limitaion.
-                    if now_high_price >= stop_price:
+                    # Use close_price instead of the current bar's High to avoid look-ahead bias.
+                    if close_price >= stop_price:
                         close_quantity = abs(net_position)
                         remark = f'short_close_stop|date:{time_index.strftime("%Y-%m-%d")}|entry:{last_future_close:.2f}|pct:{short_close_percentage:.4f}|stop:{stop_price:.2f}|settlement'
                         order_2 = account.orderbook.add_order(
