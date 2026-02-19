@@ -2,6 +2,12 @@
 *.pyc
 __pycache__/
 .spyproject/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
 
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
@@ -12,7 +18,23 @@ __pycache__/
 *.xlsx
 *.json
 *.zip
+*.parquet
+data/
+
+# Logs
+logs/
+*.log
+
+# Reports
+reports/
+*.html
+*.pdf
 
 # Some json and pkl file
 equity_prices_features/
 backtest_result/
+
+# IDE
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,11 @@
+F0001:
+  short_entry_percentage: 0.95
+  short_close_percentage: 0.05
+  short_close_percentage_2: 0.03
+  spread: 0.0
+  long_entry_percentage: 0.05
+  long_close_percentage: 0.0
+  long_stop_percentage: 0.05
+  settlement: 2
+  leverage: 1.0
+  liability_percentage: 0.0

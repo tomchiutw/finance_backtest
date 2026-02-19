@@ -1,0 +1,68 @@
+indices:
+  VIX_INDEX:
+    symbol: "^VIX"
+    category: index
+    currency: usd
+    tick_size: 0.05
+    contract_size: 1
+    fee: 0
+    contract_list: [spot]
+    is_tradable: false
+    data_source: yfinance
+
+  SP500_INDEX:
+    symbol: "^GSPC"
+    category: index
+    currency: usd
+    tick_size: 0.001
+    contract_size: 1
+    fee: 0
+    contract_list: [spot]
+    is_tradable: false
+    data_source: yfinance
+
+futures:
+  SP_FUTURE:
+    symbol: "ES=F"
+    category: future
+    currency: usd
+    tick_size: 0.25
+    contract_size: 50
+    fee: 5
+    contract_list: [c1]
+    is_tradable: true
+    margin_info:
+      initial_margin: 12980
+      maintenance_margin: 11800
+    ignore_settlement_dates: false
+    data_source: yfinance
+
+  GOLD_FUTURE:
+    symbol: "GC=F"
+    category: future
+    currency: usd
+    tick_size: 0.1
+    contract_size: 100
+    fee: 5
+    contract_list: [c1]
+    is_tradable: true
+    margin_info:
+      initial_margin: 12100
+      maintenance_margin: 11800
+    ignore_settlement_dates: true
+    data_source: yfinance
+
+  VIX_FUTURE:
+    symbol: "VIX_FUTURE"
+    category: future
+    currency: usd
+    tick_size: 0.05
+    contract_size: 1000
+    fee: 5
+    contract_list: [c1, c2]
+    is_tradable: true
+    margin_info:
+      initial_margin: 6094
+      maintenance_margin: 5540
+    ignore_settlement_dates: false
+    data_source: investing

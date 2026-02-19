@@ -160,7 +160,61 @@ class MarketData:
     def get_marketdata_file_name(self,interval,note=''):
         file_name=self.symbol+"_"+self.contract+"_"+interval+note
         return file_name
-    
+
+    def save_data_to_parquet(self, data_df, interval, note=''):
+        '''
+        Save data to a Parquet file for faster I/O.
+
+        Parameters:
+            data_df (DataFrame): Data to save.
+            interval (str): Data interval.
+            note (str, optional): Optional note appended to the file name.
+        '''
+        self.check_interval(interval)
+        base_dir = gbd.get_base_dir()
+        file_name = f"{self.symbol}_{self.contract}_{interval}{note}.parquet"
+        file_path = os.path.join(base_dir, 'data', self.category, self.symbol, self.contract)
+        full_path = os.path.join(file_path, file_name)
+        os.makedirs(file_path, exist_ok=True)
+        if os.path.exists(full_path):
+            existing_df = pd.read_parquet(full_path)
+            combined_df = data_df.combine_first(existing_df)
+            combined_df.to_parquet(full_path)
+        else:
+            data_df.to_parquet(full_path)
+
+    def get_data_from_parquet(self, interval, start_date='', end_date='', note=''):
+        '''
+        Load data from a Parquet file.
+
+        Parameters:
+            interval (str): Data interval.
+            start_date (datetime, optional): Filter start date.
+            end_date (datetime, optional): Filter end date.
+            note (str, optional): Optional note in the file name.
+
+        Returns:
+            DataFrame: Loaded market data.
+
+        Raises:
+            ValueError: If the Parquet file does not exist.
+        '''
+        self.check_interval(interval)
+        base_dir = gbd.get_base_dir()
+        file_name = f"{self.symbol}_{self.contract}_{interval}{note}.parquet"
+        file_path = os.path.join(base_dir, 'data', self.category, self.symbol, self.contract)
+        full_path = os.path.join(file_path, file_name)
+        if not os.path.exists(full_path):
+            raise ValueError(
+                f"Parquet file not found: {full_path}\n"
+                "Try MarketData.save_data_to_parquet() first."
+            )
+        df = pd.read_parquet(full_path)
+        if start_date != '' and end_date != '':
+            df = df[start_date:end_date]
+        self.data[interval] = df
+        return df
+
     def get_data_from_xlsx(self,interval,start_date='',end_date='',note=''):
         '''
         save xlsx data in specific interval and period to commodit.marketdata[contract].data[interval]
