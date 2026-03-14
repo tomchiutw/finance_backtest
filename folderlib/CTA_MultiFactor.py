@@ -204,9 +204,9 @@ def CTA_MultiFactor(self, time_index):
             identity=f"rebalance_{sym}",
             commodity=commodity,
             contract=contract,
-            order_type="market on opening order",
+            order_type="market",   # 你要用 market 也行
             direction=direction,
-            folder=self.name,
+            folder=self,           # <-- 關鍵：不要用 self.name
             order_time=time_index,
             quantity=qty,
             price=0,
